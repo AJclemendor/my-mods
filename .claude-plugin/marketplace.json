@@ -1,0 +1,14 @@
+{
+  "name": "my-mods",
+  "description": "Claude Code terminal display mods by AJclemendor.",
+  "owner": {
+    "name": "AJclemendor"
+  },
+  "plugins": [
+    {
+      "name": "compact-tools",
+      "source": "./plugins/compact-tools",
+      "description": "Compact terminal tool output with a visible ON/OFF toggle; works alongside native thinking summaries."
+    }
+  ]
+}
