@@ -2,6 +2,11 @@
 
 Claude Code mods by AJclemendor.
 
+| Plugin | What it does |
+| --- | --- |
+| [compact-tools](plugins/compact-tools) | Compact tool output, including Bash errors. |
+| [live-thinking](plugins/live-thinking) | Show thinking summaries as they arrive, before the completed transcript block. |
+
 ## Install compact-tools
 
 This marketplace is public. Anyone can install it without a repository invitation.
@@ -17,6 +22,18 @@ Run these inside Claude Code:
 The **Compact tools: ON** button appears above the terminal prompt. Click it to switch between compact and native tool output, or use `/compact-tools on`, `/compact-tools off`, or `/compact-tools` to toggle. Each session starts ON.
 
 Requires Claude Code 2.1.287 or later. The mod API can change between releases; this version was tested on 2.1.287 in classic and fullscreen terminal layouts.
+
+## Install live-thinking
+
+```text
+/plugin marketplace add AJclemendor/my-mods
+/plugin install live-thinking@my-mods
+/reload-plugins
+```
+
+The **Live thinking: ON/OFF** button controls a live preview above the prompt. It follows the latest thinking summary text in up to eight rows and clears when Claude moves to text or tools. Use `/live-thinking on` or `/live-thinking off` to control it by command. The completed thinking block still appears in the normal transcript.
+
+It works on the main conversation and can run alongside compact-tools or by itself. Enable thinking summaries as described below so the provider returns text for the preview. See the [live-thinking README](plugins/live-thinking) for details.
 
 ## What it changes
 
@@ -73,6 +90,8 @@ cd my-mods
 claude plugin validate . --strict
 claude plugin validate ./plugins/compact-tools --strict
 claude plugin test ./plugins/compact-tools
+claude plugin validate ./plugins/live-thinking --strict
+claude plugin test ./plugins/live-thinking
 ```
 
 For a local session, run `claude --plugin-dir ./plugins/compact-tools`. The ten included runtime tests cover summaries, preservation of results, running states, Bash errors, native fallback, duplicate result suppression, the status button, and the slash-command toggle. Terminal replays also verified thinking visibility and compact success and error results in classic and fullscreen layouts.

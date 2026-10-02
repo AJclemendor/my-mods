@@ -9,6 +9,11 @@
       "name": "compact-tools",
       "source": "./plugins/compact-tools",
       "description": "Compact terminal tool output with a visible ON/OFF toggle; works alongside native thinking summaries."
+    },
+    {
+      "name": "live-thinking",
+      "source": "./plugins/live-thinking",
+      "description": "See thinking summaries as they stream, with a live preview and ON/OFF toggle above the prompt."
     }
   ]
 }
