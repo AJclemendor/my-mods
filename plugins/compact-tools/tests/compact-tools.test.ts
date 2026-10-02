@@ -11,6 +11,84 @@ function toolRow(tool: string, output: unknown) {
 }
 
 describe("compact-tools", () => {
+  test("sidebar controls replace the prompt button and keep toggling the same state", async ($, on) => {
+    let visible = true;
+    on("state.get", { plugin: "sidebar-controls", key: "visible" }, () => ({ value: { value: visible, version: 0 } }));
+    on("ui.render", ($, e) => $.ui.resolve(e).Box({}));
+    const pane = await $.ui.mount({
+      plugin: "compact-tools", surface: "terminal", component: "Pane", requestId: "sidebar-controls",
+      props: { title: "Mod controls", isFocused: false, bodyColumns: 28, placement: "dock", scroll: { offset: 0, bodyRows: 40 }, view: {} },
+    });
+    const band = await $.ui.mount({
+      plugin: "compact-tools", surface: "terminal", component: "AbovePrompt",
+      props: { hasSurvey: false, isWorking: false, maxRows: 10, bodyColumns: 120, scroll: { offset: 0, bodyRows: 10 }, view: {} },
+    });
+    expect((await pane.find({ key: "toggle-compact-tools" }))?.text).toBe("Compact tools: ON");
+    expect(await band.find({ key: "toggle-compact-tools" })).toBeUndefined();
+    await pane.press({ key: "toggle-compact-tools" });
+    expect((await pane.find({ key: "toggle-compact-tools" }))?.text).toBe("Compact tools: OFF");
+    visible = false;
+    await band.redraw();
+    expect((await band.find({ key: "toggle-compact-tools" }))?.text).toBe("Compact tools: OFF");
+    await pane.unmount();
+    await band.unmount();
+  });
+
+  test("MCP calls hide nested arguments and summarize results without changing either", async ($) => {
+    const input = { ref: { id: "private-ref" }, payload: { ops: [{ content: "PRIVATE_DOCUMENT_BODY".repeat(1000) }] } };
+    const output = [{ type: "text", text: "Document updated\nBlock one\nBlock two" }];
+    const before = JSON.stringify({ input, output });
+    const target = toolRow("mcp__claude_ai_Claude_Docs__edit_doc", output);
+    const ui = await $.ui.mount({ ...target, props: { ...target.props, input } });
+    expect((await ui.find({ type: "Text", text: /MCP/ }))?.text).toBe("● claude ai Claude Docs · edit doc (MCP)");
+    expect((await ui.find({ type: "Text", text: /⎿/ }))?.text).toBe("  ⎿ Document updated … +2 lines");
+    expect(await ui.find({ type: "Text", text: /PRIVATE_DOCUMENT_BODY|private-ref|Block two/ })).toBeUndefined();
+    expect(JSON.stringify({ input, output })).toBe(before);
+    await ui.unmount();
+  });
+
+  test("MCP running calls stay compact before their arguments or result arrive", async ($) => {
+    const target = toolRow("mcp__docs__edit_doc", undefined);
+    const ui = await $.ui.mount({ ...target, props: { ...target.props, input: undefined, isRunning: true } });
+    expect((await ui.find({ type: "Text" }))?.text).toBe("● docs · edit doc (MCP) · Running…");
+    expect(await ui.find({ type: "Text", text: /⎿/ })).toBeUndefined();
+    await ui.unmount();
+  });
+
+  test("MCP errors stay visibly failed and turning off restores native details", async ($, on) => {
+    on("ui.render", ($, e) => $.ui.resolve(e).Text({ children: "FULL NATIVE MCP" }));
+    const output = { isError: true, content: [{ type: "text", text: "Access denied\nTrace detail" }] };
+    const ui = await $.ui.mount(toolRow("mcp__docs__edit_doc", output));
+    expect((await ui.find({ type: "Text", text: /MCP/ }))?.text).toBe("✗ docs · edit doc (MCP)");
+    expect((await ui.find({ type: "Text", text: /⎿/ }))?.text).toBe("  ⎿ Error · Access denied … +1 lines");
+    await $.command.run({ command: "compact-tools", args: "off" });
+    expect((await ui.find({ type: "Text" }))?.text).toBe("FULL NATIVE MCP");
+    await ui.unmount();
+  });
+
+  test("MCP non-text results are counted and their standalone result is not duplicated", async ($) => {
+    const output = { content: [{ type: "image", data: "PRIVATE_BASE64" }, { type: "resource", resource: { text: "PRIVATE_RESOURCE" } }] };
+    const ui = await $.ui.mount(toolRow("mcp__docs__fetch", output));
+    expect((await ui.find({ type: "Text", text: /⎿/ }))?.text).toBe("  ⎿ 2 non-text items");
+    expect(await ui.find({ type: "Text", text: /PRIVATE/ })).toBeUndefined();
+    const result = await $.ui.mount({ plugin: "compact-tools", surface: "terminal", component: "ToolResult", props: { tool: "mcp__docs__fetch", tool_use_id: "fetch", output, isErrored: false } });
+    expect(await result.find({ type: "Text" })).toBeUndefined();
+    await result.unmount();
+    await ui.unmount();
+  });
+
+  test("MCP interruptions keep the native interruption marker", async ($, on) => {
+    on("ui.render", ($, e) => $.ui.resolve(e).Text({ children: "NATIVE INTERRUPTED" }));
+    const output = "[Request interrupted by user for tool use]";
+    const target = toolRow("mcp__docs__edit_doc", output);
+    const ui = await $.ui.mount({ ...target, props: { ...target.props, isErrored: true, isInterrupted: true } });
+    expect((await ui.find({ type: "Text" }))?.text).toBe("NATIVE INTERRUPTED");
+    const result = await $.ui.mount({ plugin: "compact-tools", surface: "terminal", component: "ToolResult", props: { tool: target.props.tool, tool_use_id: "edit", output, isErrored: true } });
+    expect((await result.find({ type: "Text" }))?.text).toBe("NATIVE INTERRUPTED");
+    await result.unmount();
+    await ui.unmount();
+  });
+
   test("Bash output is a single preview and the original result stays intact", async ($) => {
     const output = {
       stdout: Array.from({ length: 50 }, (_, i) => `LINE_${i + 1}`).join("\n"),

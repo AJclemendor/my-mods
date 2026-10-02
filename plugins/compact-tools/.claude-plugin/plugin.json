@@ -1,6 +1,6 @@
 {
   "name": "compact-tools",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "Compact terminal tool output while Claude's native thinking display remains visible.",
   "author": {
     "name": "AJclemendor"

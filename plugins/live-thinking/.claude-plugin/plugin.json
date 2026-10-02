@@ -1,10 +1,17 @@
 {
   "name": "live-thinking",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "Stream Claude's thinking summaries inline in the conversation, with an ON/OFF toggle above the prompt.",
-  "author": { "name": "AJclemendor" },
+  "author": {
+    "name": "AJclemendor"
+  },
   "repository": "https://github.com/AJclemendor/my-mods",
   "homepage": "https://github.com/AJclemendor/my-mods",
-  "keywords": ["terminal", "thinking", "streaming", "display"],
+  "keywords": [
+    "terminal",
+    "thinking",
+    "streaming",
+    "display"
+  ],
   "types": "./types/index.d.ts"
 }

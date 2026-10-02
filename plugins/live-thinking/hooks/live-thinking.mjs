@@ -96,9 +96,15 @@ export function register(on) {
     }
   });
 
-  on("ui.render", { component: "AbovePrompt" }, async ($, e, next) => {
+  on("ui.render", { component: ["AbovePrompt", "Pane"] }, async ($, e, next) => {
+    const inSidebar = e.component === "Pane" && e.requestId === "sidebar-controls";
+    if (!inSidebar && e.component !== "AbovePrompt") return next(e);
     const original = await next(e);
     if (e.surface !== "terminal" || e.props.hasSurvey || e.props.view?.agentId) return original;
+    if (!inSidebar) {
+      const { value: sidebarVisible } = await $.state.get({ plugin: "sidebar-controls", key: "visible" });
+      if (sidebarVisible) return original;
+    }
     const { value: enabled = true } = await $.state.get(enabledState);
     const { Box, Button } = $.ui.resolve(e);
     const children = [original, Button({

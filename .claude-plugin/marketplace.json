@@ -8,12 +8,17 @@
     {
       "name": "compact-tools",
       "source": "./plugins/compact-tools",
-      "description": "Compact terminal tool output with a visible ON/OFF toggle; works alongside native thinking summaries."
+      "description": "Compact terminal tool output, including MCP arguments and results, with an ON/OFF toggle."
     },
     {
       "name": "live-thinking",
       "source": "./plugins/live-thinking",
       "description": "See thinking summaries stream inline in the conversation, with an ON/OFF toggle above the prompt."
+    },
+    {
+      "name": "sidebar-controls",
+      "source": "./plugins/sidebar-controls",
+      "description": "Move Compact tools and Live thinking controls into a top-right sidebar."
     }
   ]
 }

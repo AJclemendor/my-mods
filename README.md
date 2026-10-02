@@ -4,8 +4,9 @@ Claude Code mods by AJclemendor.
 
 | Plugin | What it does |
 | --- | --- |
-| [compact-tools](plugins/compact-tools) | Compact tool output, including Bash errors. |
+| [compact-tools](plugins/compact-tools) | Compact tool output, including MCP calls and Bash errors. |
 | [live-thinking](plugins/live-thinking) | Stream thinking summaries inline in the conversation. |
+| [sidebar-controls](plugins/sidebar-controls) | Put both ON/OFF controls in a top-right sidebar. |
 
 ## Install compact-tools
 
@@ -35,16 +36,29 @@ Thinking summaries stream inline after the latest conversation message or tool r
 
 It works on the main conversation and can run alongside compact-tools or by itself. Enable thinking summaries as described below so the provider returns text for the preview. See the [live-thinking README](plugins/live-thinking) for details.
 
+## Install sidebar-controls
+
+```text
+/plugin marketplace add AJclemendor/my-mods
+/plugin install sidebar-controls@my-mods
+/reload-plugins
+```
+
+This separate plugin installs compatible versions of compact-tools and live-thinking and moves their buttons into a 28-column sidebar at the top right. Thinking and tool output stay inline in the conversation. Close the sidebar to return the buttons above the prompt; `/sidebar-controls on` reopens it, and `/sidebar-controls off` closes it.
+
+Claude automatically shows the sidebar in wide fullscreen terminals, normally from 144 columns. If it is waiting for space, the original buttons remain available. Running `/sidebar-controls on` explicitly opens it: fullscreen terminals from 110 columns dock it on the right; narrower or classic terminals place it above the prompt. See the [sidebar-controls README](plugins/sidebar-controls) for details.
+
 ## What it changes
 
 - Bash: one result line plus a count of hidden lines, with stderr first.
 - Failed Bash calls: a red error row with the exit code when available, the first diagnostic, and a count of hidden lines.
 - Edit and Write: line counts instead of expanded diffs and file contents.
 - Text Read: number of lines read.
+- MCP calls: tool name without the JSON arguments, plus the first result line and a count of hidden lines. Non-text results are counted; errors remain visibly failed.
 - Running calls: a running indicator.
 - A blank line before each tool call keeps it separate from preceding thinking or text.
 
-Non-Bash errors, interrupted calls, staged changes, unknown tools, and unsupported result formats keep their native rendering. Turning compact tools OFF restores full Bash error output too. The mod does not modify tool calls, stored results, model-visible content, account selection, or permission settings. It makes no model or network calls.
+Errors outside Bash and MCP, interrupted calls, staged changes, unknown tools, and unsupported built-in result formats keep their native rendering. Turning compact tools OFF restores full arguments and results, including errors. The mod does not modify tool calls, stored results, model-visible content, account selection, or permission settings. It makes no model or network calls.
 
 ## Show thinking summaries too
 
@@ -79,6 +93,7 @@ Update the marketplace and plugin from the `/plugin` interface. From a shell:
 claude plugin marketplace update my-mods
 claude plugin update compact-tools@my-mods
 claude plugin update live-thinking@my-mods
+claude plugin update sidebar-controls@my-mods
 ```
 
 Reload plugins or restart the session afterward. To remove it, run `claude plugin uninstall compact-tools@my-mods`.
@@ -93,8 +108,10 @@ claude plugin validate ./plugins/compact-tools --strict
 claude plugin test ./plugins/compact-tools
 claude plugin validate ./plugins/live-thinking --strict
 claude plugin test ./plugins/live-thinking
+claude plugin validate ./plugins/sidebar-controls --strict
+claude plugin test ./plugins/sidebar-controls
 ```
 
-For a local session, run `claude --plugin-dir ./plugins/compact-tools`. The ten included runtime tests cover summaries, preservation of results, running states, Bash errors, native fallback, duplicate result suppression, the status button, and the slash-command toggle. Terminal replays also verified thinking visibility and compact success and error results in classic and fullscreen layouts.
+For a local session with all three plugins, run `claude --plugin-dir ./plugins`. Runtime tests cover summaries, preservation of results, running states, errors, native fallback, duplicate result suppression, controls, and streaming thinking. Offline terminal replays also verify MCP success and error calls in classic and fullscreen layouts, and sidebar placement, closing, reopening, and mouse toggling.
 
 [Claude marketplace documentation](https://code.claude.com/docs/en/plugin-marketplaces) · [Mods documentation](https://code.claude.com/docs/en/plugins/mods/overview)

@@ -24,9 +24,15 @@ export function register(on) {
     return { text: `Compact tools ${enabled ? "on" : "off"}. Thinking display is unchanged.` };
   });
 
-  on("ui.render", { component: "AbovePrompt" }, async ($, e, next) => {
+  on("ui.render", { component: ["AbovePrompt", "Pane"] }, async ($, e, next) => {
+    const inSidebar = e.component === "Pane" && e.requestId === "sidebar-controls";
+    if (!inSidebar && e.component !== "AbovePrompt") return next(e);
     const original = await next(e);
     if (e.surface !== "terminal" || e.props.hasSurvey) return original;
+    if (!inSidebar) {
+      const { value: sidebarVisible } = await $.state.get({ plugin: "sidebar-controls", key: "visible" });
+      if (sidebarVisible) return original;
+    }
     const { value = true } = await $.state.get(enabledState);
     const { Box, Button } = $.ui.resolve(e);
     return Box({
@@ -45,6 +51,20 @@ export function register(on) {
 
   on("ui.render", { component: "ToolUse" }, async ($, e, next) => {
     const p = e.props;
+    if (e.surface === "terminal" && isMcp(p.tool) && !p.isInterrupted) {
+      const { value = true } = await $.state.get(enabledState);
+      if (!value || isInterruption(p.output)) return next(e);
+      const failed = p.isErrored || p.output?.isError === true;
+      const name = p.tool.slice(5).split("__").map(part => part.replace(/_/g, " ")).join(" · ");
+      const label = `${failed ? "✗" : "●"} ${oneLine(name)} (MCP)${p.isRunning ? " · Running…" : ""}`;
+      return $.ui.resolve(e).Box({
+        flexDirection: "column",
+        marginTop: 1,
+        children: [row($, e, label, false, failed), ...(p.isRunning ? [] : [
+          row($, e, `  ⎿ ${failed ? "Error · " : ""}${mcpResultLabel(p.output, failed)}`, true, failed),
+        ])],
+      });
+    }
     if (e.surface !== "terminal" || !supported.has(p.tool) || (p.isErrored && p.tool !== "Bash") || p.isInterrupted) {
       return next(e);
     }
@@ -64,6 +84,11 @@ export function register(on) {
 
   on("ui.render", { component: "ToolResult" }, async ($, e, next) => {
     const p = e.props;
+    if (e.surface === "terminal" && isMcp(p.tool)) {
+      const { value = true } = await $.state.get(enabledState);
+      if (!value || isInterruption(p.output)) return next(e);
+      return $.ui.resolve(e).Box({});
+    }
     if (e.surface !== "terminal" || !supported.has(p.tool) || (p.isErrored && p.tool !== "Bash")) return next(e);
     const { value = true } = await $.state.get(enabledState);
     if (!value) return next(e);
@@ -72,6 +97,25 @@ export function register(on) {
     // Both layouts receive the result on ToolUse; the standalone result would repeat it.
     return $.ui.resolve(e).Box({});
   });
+}
+
+function isMcp(tool) {
+  return tool.startsWith("mcp__");
+}
+
+function isInterruption(output) {
+  return typeof output === "string" && /^(?:Error:\s*)?\[(?:Request interrupted|Tool call )/i.test(output.trim());
+}
+
+function mcpResultLabel(output, failed) {
+  const blocks = Array.isArray(output) ? output : Array.isArray(output?.content) ? output.content : [];
+  const texts = typeof output === "string" ? [output] : blocks.filter(block => block?.type === "text" && typeof block.text === "string").map(block => block.text);
+  const lines = texts.flatMap(text => text.split(/\r?\n/)).map(oneLine).filter(Boolean);
+  const attachments = blocks.filter(block => block?.type !== "text").length;
+  const first = failed ? lines[0]?.replace(/^Error:\s*/i, "") : lines[0];
+  const fallback = failed ? "Tool failed" : attachments ? `${attachments} non-text ${attachments === 1 ? "item" : "items"}`
+    : output?.structuredContent || (output && !Array.isArray(output) && typeof output === "object" && !Array.isArray(output.content)) ? "Structured result" : "No output";
+  return `${first || fallback}${lines.length > 1 ? ` … +${lines.length - 1} lines` : ""}${lines.length && attachments ? ` · ${attachments} non-text ${attachments === 1 ? "item" : "items"}` : ""}`;
 }
 
 function toolLabel(p) {

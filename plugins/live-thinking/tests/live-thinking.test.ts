@@ -17,6 +17,29 @@ async function inline($: any, on: any) {
 }
 
 describe("live-thinking", () => {
+  test("sidebar controls replace the prompt button and keep toggling the same state", async ($, on) => {
+    let visible = true;
+    on("state.get", { plugin: "sidebar-controls", key: "visible" }, () => ({ value: { value: visible, version: 0 } }));
+    on("ui.render", ($, e) => $.ui.resolve(e).Box({}));
+    const pane = await $.ui.mount({
+      plugin: "live-thinking", surface: "terminal", component: "Pane", requestId: "sidebar-controls",
+      props: { title: "Mod controls", isFocused: false, bodyColumns: 28, placement: "dock", scroll: { offset: 0, bodyRows: 40 }, view: {} },
+    });
+    const band = await $.ui.mount({
+      plugin: "live-thinking", surface: "terminal", component: "AbovePrompt",
+      props: { hasSurvey: false, isWorking: false, maxRows: 10, bodyColumns: 120, scroll: { offset: 0, bodyRows: 10 }, view: {} },
+    });
+    expect((await pane.find({ key: "toggle-live-thinking" }))?.text).toBe("Live thinking: ON");
+    expect(await band.find({ key: "toggle-live-thinking" })).toBeUndefined();
+    await pane.press({ key: "toggle-live-thinking" });
+    expect((await pane.find({ key: "toggle-live-thinking" }))?.text).toBe("Live thinking: OFF");
+    visible = false;
+    await band.redraw();
+    expect((await band.find({ key: "toggle-live-thinking" }))?.text).toBe("Live thinking: OFF");
+    await pane.unmount();
+    await band.unmount();
+  });
+
   for (const isFullscreen of [false, true]) {
     for (const target of [
       { component: "ToolResult", requestId: "tool-1", props: { tool: "Read", tool_use_id: "tool-1", output: {}, isErrored: false } },

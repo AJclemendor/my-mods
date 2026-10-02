@@ -1,0 +1,26 @@
+{
+  "name": "sidebar-controls",
+  "version": "0.1.0",
+  "description": "Move Compact tools and Live thinking controls into a top-right sidebar.",
+  "author": {
+    "name": "AJclemendor"
+  },
+  "repository": "https://github.com/AJclemendor/my-mods",
+  "homepage": "https://github.com/AJclemendor/my-mods",
+  "keywords": [
+    "terminal",
+    "sidebar",
+    "controls"
+  ],
+  "dependencies": [
+    {
+      "name": "compact-tools",
+      "version": "^0.1.2"
+    },
+    {
+      "name": "live-thinking",
+      "version": "^0.1.2"
+    }
+  ],
+  "types": "./types/index.d.ts"
+}

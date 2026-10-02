@@ -10,6 +10,8 @@ See Claude's thinking summary stream inline in the conversation, before the comp
 
 The **Live thinking: ON/OFF** button above the prompt controls the preview. You can also use `/live-thinking`, `/live-thinking on`, or `/live-thinking off`. Each session starts ON. It works independently of compact-tools, and both plugins can be loaded together.
 
+Install [sidebar-controls](../sidebar-controls) to move the ON/OFF button into a top-right sidebar. Thinking remains inline in the conversation; closing the sidebar returns the button above the prompt.
+
 The preview appears after the latest user message, assistant message, or tool result. Only the toggle occupies the area above the prompt. The preview clears when the response moves to text or a tool call, finishes, fails, or is cancelled. Claude's completed thinking block remains in the normal transcript. The preview shows the main conversation's thinking; it does not mix in background subagent streams.
 
 ## Enable thinking summaries
