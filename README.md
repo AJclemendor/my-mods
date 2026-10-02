@@ -5,7 +5,7 @@ Claude Code mods by AJclemendor.
 | Plugin | What it does |
 | --- | --- |
 | [compact-tools](plugins/compact-tools) | Compact tool output, including Bash errors. |
-| [live-thinking](plugins/live-thinking) | Show thinking summaries as they arrive, before the completed transcript block. |
+| [live-thinking](plugins/live-thinking) | Stream thinking summaries inline in the conversation. |
 
 ## Install compact-tools
 
@@ -31,7 +31,7 @@ Requires Claude Code 2.1.287 or later. The mod API can change between releases; 
 /reload-plugins
 ```
 
-The **Live thinking: ON/OFF** button controls a live preview above the prompt. It follows the latest thinking summary text in up to eight rows and clears when Claude moves to text or tools. Use `/live-thinking on` or `/live-thinking off` to control it by command. The completed thinking block still appears in the normal transcript.
+Thinking summaries stream inline after the latest conversation message or tool result. The **Live thinking: ON/OFF** button stays above the prompt; use it or `/live-thinking on` and `/live-thinking off` to control the preview. The temporary text clears when Claude moves to text or tools, and the completed thinking block remains in the normal transcript.
 
 It works on the main conversation and can run alongside compact-tools or by itself. Enable thinking summaries as described below so the provider returns text for the preview. See the [live-thinking README](plugins/live-thinking) for details.
 
@@ -78,6 +78,7 @@ Update the marketplace and plugin from the `/plugin` interface. From a shell:
 ```sh
 claude plugin marketplace update my-mods
 claude plugin update compact-tools@my-mods
+claude plugin update live-thinking@my-mods
 ```
 
 Reload plugins or restart the session afterward. To remove it, run `claude plugin uninstall compact-tools@my-mods`.

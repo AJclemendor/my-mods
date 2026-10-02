@@ -1,7 +1,7 @@
 {
   "name": "live-thinking",
-  "version": "0.1.0",
-  "description": "Show Claude's thinking summaries as they stream, with an ON/OFF toggle above the prompt.",
+  "version": "0.1.1",
+  "description": "Stream Claude's thinking summaries inline in the conversation, with an ON/OFF toggle above the prompt.",
   "author": { "name": "AJclemendor" },
   "repository": "https://github.com/AJclemendor/my-mods",
   "homepage": "https://github.com/AJclemendor/my-mods",

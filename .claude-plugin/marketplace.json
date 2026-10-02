@@ -13,7 +13,7 @@
     {
       "name": "live-thinking",
       "source": "./plugins/live-thinking",
-      "description": "See thinking summaries as they stream, with a live preview and ON/OFF toggle above the prompt."
+      "description": "See thinking summaries stream inline in the conversation, with an ON/OFF toggle above the prompt."
     }
   ]
 }

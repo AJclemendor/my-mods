@@ -7,7 +7,39 @@ const BAND = {
   props: { hasSurvey: false, isWorking: true, maxRows: 14, bodyColumns: 100, scroll: { offset: 0, bodyRows: 14 }, view: {} },
 } as const;
 
+const ROW = {
+  plugin: "live-thinking", surface: "terminal", component: "UserMessage", requestId: "prompt",
+  props: { text: "Prompt", origin: { kind: "composer" }, isExpanded: true },
+} as const;
+async function inline($: any, on: any) {
+  on("state.get", { plugin: "live-thinking", key: "anchor" }, () => ({ value: { value: { kind: "user", id: "prompt" }, version: 1 } }));
+  return $.ui.mount(ROW);
+}
+
 describe("live-thinking", () => {
+  for (const isFullscreen of [false, true]) {
+    for (const target of [
+      { component: "ToolResult", requestId: "tool-1", props: { tool: "Read", tool_use_id: "tool-1", output: {}, isErrored: false } },
+      { component: "ToolGroup", requestId: "group-1", props: { calls: [{ tool: "Read", tool_use_id: "tool-1", input: {}, isRunning: false, isErrored: false, isInterrupted: false }], isActive: false, isExpanded: true } },
+    ]) {
+      test(`renders after ${target.component} in ${isFullscreen ? "fullscreen" : "classic"}`, async ($, on) => {
+        on("state.get", { plugin: "live-thinking", key: "anchor" }, () => ({ value: { value: { kind: "tool", id: "tool-1" }, version: 1 } }));
+        on("ui.render", ($, e) => $.ui.resolve(e).Text({ children: "ORIGINAL TOOL ROW" }));
+        on("turn.step", async function* () { yield { kind: "thinking", index: 0, text: "After the tool" }; return RESULT; });
+        const ui = await $.ui.mount({ plugin: "live-thinking", surface: "terminal", viewport: { columns: 100, rows: 40, isFullscreen }, ...target } as any);
+        const stream = $.turn.step(STEP);
+        await stream.next();
+        expect(await ui.find({ type: "Text", text: "ORIGINAL TOOL ROW" })).toBeDefined();
+        expect((await ui.find({ key: "thinking-preview" }))?.text).toBe("After the tool");
+        const unrelated = await $.ui.mount(ROW);
+        expect(await unrelated.find({ key: "thinking-preview" })).toBeUndefined();
+        await unrelated.unmount();
+        await stream.next();
+        await ui.unmount();
+      });
+    }
+  }
+
   test("renders each thinking chunk before the response completes and preserves the stream", async ($, on) => {
     const chunks = [
       { kind: "thinking", index: 0, text: "First thought. " },
@@ -21,8 +53,8 @@ describe("live-thinking", () => {
       yield* chunks;
       return RESULT;
     });
-    on("ui.render", { component: "AbovePrompt" }, ($, e) => $.ui.resolve(e).Box({}));
-    const ui = await $.ui.mount(BAND);
+    on("ui.render", ($, e) => $.ui.resolve(e).Box({}));
+    const ui = await inline($, on);
     const stream = $.turn.step(STEP);
     expect((await stream.next()).value).toEqual(chunks[0]);
     expect((await ui.find({ key: "thinking-preview" }))?.text).toBe("First thought. ");
@@ -43,8 +75,8 @@ describe("live-thinking", () => {
       yield { kind: "tool", index: 2, id: "read", name: "Read" };
       return RESULT;
     });
-    on("ui.render", { component: "AbovePrompt" }, ($, e) => $.ui.resolve(e).Box({}));
-    const ui = await $.ui.mount(BAND);
+    on("ui.render", ($, e) => $.ui.resolve(e).Box({}));
+    const ui = await inline($, on);
     const stream = $.turn.step(STEP);
     await stream.next();
     await stream.next();
@@ -60,16 +92,19 @@ describe("live-thinking", () => {
       yield { kind: "thinking", index: 0, text: "Still thinking" };
       return RESULT;
     });
-    on("ui.render", { component: "AbovePrompt" }, ($, e) => $.ui.resolve(e).Text({ children: "OTHER MOD" }));
-    const ui = await $.ui.mount(BAND);
+    on("ui.render", ($, e) => $.ui.resolve(e).Text({ children: "OTHER MOD" }));
+    const ui = await inline($, on);
     const stream = $.turn.step(STEP);
     await stream.next();
+    const controls = await $.ui.mount(BAND);
     expect(await ui.find({ type: "Text", text: "OTHER MOD" })).toBeDefined();
-    await ui.press({ key: "toggle-live-thinking" });
-    expect((await ui.find({ key: "toggle-live-thinking" }))?.text).toBe("Live thinking: OFF");
+    await controls.press({ key: "toggle-live-thinking" });
+    expect((await controls.find({ key: "toggle-live-thinking" }))?.text).toBe("Live thinking: OFF");
     expect(await ui.find({ key: "thinking-preview" })).toBeUndefined();
     await $.command.run({ command: "live-thinking", args: "on" });
     expect((await ui.find({ key: "thinking-preview" }))?.text).toBe("Still thinking");
+    expect(await controls.find({ key: "thinking-preview" })).toBeUndefined();
+    await controls.unmount();
     await stream.next();
     expect(await ui.find({ key: "thinking-preview" })).toBeUndefined();
     await ui.unmount();
@@ -80,8 +115,8 @@ describe("live-thinking", () => {
       yield { kind: "thinking", index: 0, text: e.agentId ? "Child thought" : "Main thought" };
       return { ...RESULT, turnId: e.turnId };
     });
-    on("ui.render", { component: "AbovePrompt" }, ($, e) => $.ui.resolve(e).Box({}));
-    const ui = await $.ui.mount(BAND);
+    on("ui.render", ($, e) => $.ui.resolve(e).Box({}));
+    const ui = await inline($, on);
     const main = $.turn.step(STEP);
     await main.next();
     const child = $.turn.step({ ...STEP, turnId: "turn-child", agentId: "child" });
@@ -97,8 +132,8 @@ describe("live-thinking", () => {
       yield { kind: "thinking", index: 0, text: e.turnId };
       return { ...RESULT, turnId: e.turnId };
     });
-    on("ui.render", { component: "AbovePrompt" }, ($, e) => $.ui.resolve(e).Box({}));
-    const ui = await $.ui.mount(BAND);
+    on("ui.render", ($, e) => $.ui.resolve(e).Box({}));
+    const ui = await inline($, on);
     const older = $.turn.step(STEP);
     await older.next();
     const newer = $.turn.step({ ...STEP, turnId: "newer" });
@@ -123,8 +158,8 @@ describe("live-thinking", () => {
       yield { kind: "thinking", index: 0, text: "Partial thought" };
       throw new Error("Source failed");
     });
-    on("ui.render", { component: "AbovePrompt" }, ($, e) => $.ui.resolve(e).Box({}));
-    const ui = await $.ui.mount(BAND);
+    on("ui.render", ($, e) => $.ui.resolve(e).Box({}));
+    const ui = await inline($, on);
     const stream = $.turn.step(STEP);
     await stream.next();
     let message = "";
@@ -143,8 +178,8 @@ describe("live-thinking", () => {
         return RESULT;
       } finally { closed = true; }
     });
-    on("ui.render", { component: "AbovePrompt" }, ($, e) => $.ui.resolve(e).Box({}));
-    const ui = await $.ui.mount(BAND);
+    on("ui.render", ($, e) => $.ui.resolve(e).Box({}));
+    const ui = await inline($, on);
     const stream = $.turn.step(STEP);
     await stream.next();
     await stream.return(RESULT);
@@ -156,8 +191,8 @@ describe("live-thinking", () => {
   test("large previews stay bounded without truncating the forwarded thinking", async ($, on) => {
     const text = "BEGIN" + "x".repeat(40000) + "LATEST";
     on("turn.step", async function* () { yield { kind: "thinking", index: 0, text }; return RESULT; });
-    on("ui.render", { component: "AbovePrompt" }, ($, e) => $.ui.resolve(e).Box({}));
-    const ui = await $.ui.mount(BAND);
+    on("ui.render", ($, e) => $.ui.resolve(e).Box({}));
+    const ui = await inline($, on);
     const stream = $.turn.step(STEP);
     expect((await stream.next()).value).toEqual({ kind: "thinking", index: 0, text });
     const visible = (await ui.find({ key: "thinking-preview" }))?.text ?? "";

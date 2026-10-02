@@ -1,17 +1,37 @@
 const enabledState = { plugin: "live-thinking", key: "enabled" };
 const previewState = { plugin: "live-thinking", key: "preview" };
+const anchorState = { plugin: "live-thinking", key: "anchor" };
 const MAX_PREVIEW_CHARS = 8000;
 
 export function register(on) {
   on("session.start", async ($, e, next) => {
     const result = await next(e);
     await $.state.set(previewState, null);
+    await $.state.set(anchorState, null);
     await $.command.register({
       name: "live-thinking",
-      description: "Toggle the live thinking preview above the prompt",
+      description: "Toggle live thinking inline in the conversation",
       argumentHint: "[on|off]",
       immediate: true,
     });
+    return result;
+  });
+
+  on("session.append", async ($, e, next) => {
+    const result = await next(e);
+    if (e.agentId || result.deny) return result;
+    const message = result.message ?? e.message;
+    const blocks = message.content;
+    if (message.type === "user" || message.type === "assistant") {
+      const last = blocks.at(-1);
+      if (last?.type === "tool_result") {
+        await $.state.set(anchorState, { kind: "tool", id: last.tool_use_id });
+      } else if (last?.type === "tool_use") {
+        await $.state.set(anchorState, { kind: "tool", id: last.id });
+      } else if (last?.type === "text" && !message.isMeta) {
+        await $.state.set(anchorState, { kind: message.type, id: e.uuid });
+      }
+    }
     return result;
   });
 
@@ -80,8 +100,7 @@ export function register(on) {
     const original = await next(e);
     if (e.surface !== "terminal" || e.props.hasSurvey || e.props.view?.agentId) return original;
     const { value: enabled = true } = await $.state.get(enabledState);
-    const { value: preview } = await $.state.get(previewState);
-    const { Box, Button, Text } = $.ui.resolve(e);
+    const { Box, Button } = $.ui.resolve(e);
     const children = [original, Button({
       key: "toggle-live-thinking",
       label: `Live thinking: ${enabled ? "ON" : "OFF"}`,
@@ -91,27 +110,45 @@ export function register(on) {
         await $.state.set(enabledState, !value);
       },
     })];
-    if (enabled && preview?.text) {
-      const visible = previewTail(preview.text
-        .replace(/\x1b\[[0-?]*[ -/]*[@-~]/g, "")
-        .replace(/[\x00-\x08\x0b-\x1f\x7f-\x9f]/g, "")
-        .replace(/\t/g, "  "));
-      children.push(Box({
-        key: "thinking-preview",
-        height: Math.max(1, Math.min(8, e.props.maxRows - 3)),
-        width: Math.max(1, e.props.bodyColumns),
-        flexDirection: "column",
-        justifyContent: "flex-end",
-        overflow: "hidden",
-        paddingLeft: 2,
-        children: [Box({
-          flexShrink: 0,
-          children: [Text({ dimColor: true, children: visible })],
-        })],
-      }));
-    }
     return Box({ flexDirection: "column", children });
   });
+
+  on("ui.render", async ($, e, next) => {
+    if (e.surface !== "terminal" || !["UserMessage", "AssistantMessage", "ToolResult", "ToolGroup"].includes(e.component)) {
+      return next(e);
+    }
+    const { value: anchor } = await $.state.get(anchorState);
+    if (!isAnchor(e, anchor)) return next(e);
+    const original = await next(e);
+    const { value: enabled = true } = await $.state.get(enabledState);
+    const { value: preview } = await $.state.get(previewState);
+    if (!enabled || !preview?.text) return original;
+    const visible = previewTail(preview.text
+      .replace(/\x1b\[[0-?]*[ -/]*[@-~]/g, "")
+      .replace(/[\x00-\x08\x0b-\x1f\x7f-\x9f]/g, "")
+      .replace(/\t/g, "  "));
+    const { Box, Text } = $.ui.resolve(e);
+    return Box({
+      flexDirection: "column",
+      children: [original, Box({
+        marginTop: 1,
+        flexDirection: "row",
+        children: [Text({ dimColor: true, children: "∴ " }), Box({
+          key: "thinking-preview",
+          flexShrink: 1,
+          children: [Text({ dimColor: true, children: visible })],
+        })],
+      })],
+    });
+  });
+}
+
+function isAnchor(e, anchor) {
+  if (!anchor) return false;
+  if (anchor.kind === "user") return e.component === "UserMessage" && e.requestId === anchor.id;
+  if (anchor.kind === "assistant") return e.component === "AssistantMessage" && e.requestId === anchor.id;
+  if (e.component === "ToolResult") return e.props.tool_use_id === anchor.id;
+  return e.component === "ToolGroup" && e.props.calls.some(call => call.tool_use_id === anchor.id);
 }
 
 function previewTail(text) {

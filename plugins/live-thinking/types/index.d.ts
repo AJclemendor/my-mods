@@ -3,6 +3,7 @@ declare module "claude-code" {
     "live-thinking": {
       enabled: boolean;
       preview: { text: string } | null;
+      anchor: { kind: "user" | "assistant" | "tool"; id: string } | null;
     };
   }
 }
