@@ -45,29 +45,29 @@ export function register(on) {
 
   on("ui.render", { component: "ToolUse" }, async ($, e, next) => {
     const p = e.props;
-    if (e.surface !== "terminal" || !supported.has(p.tool) || p.isErrored || p.isInterrupted) {
+    if (e.surface !== "terminal" || !supported.has(p.tool) || (p.isErrored && p.tool !== "Bash") || p.isInterrupted) {
       return next(e);
     }
     const { value = true } = await $.state.get(enabledState);
     if (!value) return next(e);
     const label = toolLabel(p);
     if (label === null) return next(e);
-    const result = resultLabel(p.tool, p.output);
-    if (p.output !== undefined && result === null) return next(e);
+    const result = p.isErrored ? bashErrorLabel(p.output) : resultLabel(p.tool, p.output);
+    if ((p.isErrored || p.output !== undefined) && result === null) return next(e);
     const { Box } = $.ui.resolve(e);
     return Box({
       flexDirection: "column",
       marginTop: 1,
-      children: [row($, e, label, false), ...(result === null ? [] : [row($, e, `  ⎿ ${result}`, true)])],
+      children: [row($, e, label, false, p.isErrored), ...(result === null ? [] : [row($, e, `  ⎿ ${result}`, true, p.isErrored)])],
     });
   });
 
   on("ui.render", { component: "ToolResult" }, async ($, e, next) => {
     const p = e.props;
-    if (e.surface !== "terminal" || !supported.has(p.tool) || p.isErrored) return next(e);
+    if (e.surface !== "terminal" || !supported.has(p.tool) || (p.isErrored && p.tool !== "Bash")) return next(e);
     const { value = true } = await $.state.get(enabledState);
     if (!value) return next(e);
-    const label = resultLabel(p.tool, p.output);
+    const label = p.isErrored ? bashErrorLabel(p.output) : resultLabel(p.tool, p.output);
     if (label === null) return next(e);
     // Both layouts receive the result on ToolUse; the standalone result would repeat it.
     return $.ui.resolve(e).Box({});
@@ -79,7 +79,7 @@ function toolLabel(p) {
   if (!input || typeof input !== "object") return null;
   const label = p.tool === "Bash" ? input.description || input.command : input.file_path;
   if (typeof label !== "string") return null;
-  return `● ${p.tool}(${oneLine(label)})${p.isRunning ? " · Running…" : ""}`;
+  return `${p.isErrored ? "✗" : "●"} ${p.tool}(${oneLine(label)})${p.isRunning ? " · Running…" : ""}`;
 }
 
 function oneLine(value) {
@@ -91,11 +91,11 @@ function oneLine(value) {
     .slice(0, 2000);
 }
 
-function row($, e, label, dimColor) {
+function row($, e, label, dimColor, isError = false) {
   const { Box, Text } = $.ui.resolve(e);
   return Box({
     height: 1,
-    children: [Text({ dimColor, wrap: "truncate-end", children: label })],
+    children: [Text({ dimColor: isError ? false : dimColor, color: isError ? "red" : undefined, wrap: "truncate-end", children: label })],
   });
 }
 
@@ -105,6 +105,19 @@ function linesIn(text) {
 
 function lineCount(count) {
   return `${count} ${count === 1 ? "line" : "lines"}`;
+}
+
+function bashErrorLabel(output) {
+  if (typeof output !== "string") {
+    const summary = resultLabel("Bash", output);
+    return summary === null ? null : `Error · ${summary}`;
+  }
+  if (/^(?:Error:\s*)?\[(?:Request interrupted|Tool call )/i.test(output.trim())) return null;
+  const lines = output.split(/\r?\n/).map(oneLine).filter(Boolean);
+  const exit = lines[0]?.match(/^(?:Error:\s*)?Exit code (\d+)$/i);
+  if (exit) lines.shift();
+  const detail = lines[0]?.replace(/^Error:\s*/i, "") || "Command failed";
+  return `${exit ? `Exit code ${exit[1]}` : "Error"} · ${detail}${lines.length > 1 ? ` … +${lines.length - 1} lines` : ""}`;
 }
 
 function resultLabel(tool, output) {

@@ -21,12 +21,13 @@ Requires Claude Code 2.1.287 or later. The mod API can change between releases; 
 ## What it changes
 
 - Bash: one result line plus a count of hidden lines, with stderr first.
+- Failed Bash calls: a red error row with the exit code when available, the first diagnostic, and a count of hidden lines.
 - Edit and Write: line counts instead of expanded diffs and file contents.
 - Text Read: number of lines read.
 - Running calls: a running indicator.
 - A blank line before each tool call keeps it separate from preceding thinking or text.
 
-Errors, interrupted calls, staged changes, unknown tools, and unsupported result formats keep their native rendering. The mod does not modify tool calls, stored results, model-visible content, account selection, or permission settings. It makes no model or network calls.
+Non-Bash errors, interrupted calls, staged changes, unknown tools, and unsupported result formats keep their native rendering. Turning compact tools OFF restores full Bash error output too. The mod does not modify tool calls, stored results, model-visible content, account selection, or permission settings. It makes no model or network calls.
 
 ## Show thinking summaries too
 
@@ -74,6 +75,6 @@ claude plugin validate ./plugins/compact-tools --strict
 claude plugin test ./plugins/compact-tools
 ```
 
-For a local session, run `claude --plugin-dir ./plugins/compact-tools`. The seven included runtime tests cover summaries, preservation of results, running states, native fallback, duplicate result suppression, the status button, and the slash-command toggle. Terminal replays also verified thinking visibility and compact results in classic and fullscreen layouts.
+For a local session, run `claude --plugin-dir ./plugins/compact-tools`. The ten included runtime tests cover summaries, preservation of results, running states, Bash errors, native fallback, duplicate result suppression, the status button, and the slash-command toggle. Terminal replays also verified thinking visibility and compact success and error results in classic and fullscreen layouts.
 
 [Claude marketplace documentation](https://code.claude.com/docs/en/plugin-marketplaces) · [Mods documentation](https://code.claude.com/docs/en/plugins/mods/overview)

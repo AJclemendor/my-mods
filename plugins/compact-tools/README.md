@@ -2,6 +2,8 @@
 
 Compact Bash, Read, Edit, and Write output for Claude Code's terminal, with a visible ON/OFF toggle above the prompt. Run `/compact-tools` to toggle, or `/compact-tools on` and `/compact-tools off`.
 
+Failed Bash calls show a compact red error row with their exit code when available and first diagnostic. Turn the mod off to see full error output.
+
 Install from the marketplace:
 
 ```text
