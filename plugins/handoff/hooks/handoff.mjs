@@ -97,6 +97,9 @@ export function register(on) {
       Text({ bold: true, children: "Default model" }),
       choices("handoff-model", models, settings.model, model => ({ model })),
       Text({ dimColor: true, children: `Selected: ${models.find(model => model.value === settings.model)?.label || settings.model}` }),
+      Text({ bold: true, children: "Thinking effort" }),
+      choices("handoff-effort", efforts.map(value => ({ value, label: value === "inherit" ? "Main session" : value })), settings.effort, effort => ({ effort })),
+      Text({ dimColor: true, children: `Selected effort: ${settings.effort === "inherit" ? "Follow main session" : settings.effort} · applies to new handoffs` }),
       Input({ key: "handoff-custom-model", label: "Custom model ID", placeholder: "Full model ID; Enter to save", value: state.custom,
         onInput: value => { state.custom = value; },
         onSubmit: value => {
@@ -105,8 +108,6 @@ export function register(on) {
           return save($, state, { model });
         },
       }),
-      Text({ bold: true, children: "Default effort" }),
-      choices("handoff-effort", efforts.map(value => ({ value, label: value === "inherit" ? "Main session" : value })), settings.effort, effort => ({ effort })),
       Text({ bold: true, children: "Included with every task" }),
       Text({ children: "One new worktree and branch from the latest remote main. Implement, test, commit, push, and open a PR against main. Report the PR link and results." }),
       ...(state.error ? [Text({ color: "red", children: state.error })] : []),
