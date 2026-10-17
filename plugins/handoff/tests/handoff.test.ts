@@ -74,8 +74,8 @@ describe("handoff", () => {
     const naming = w.namingRequests[0];
     expect(naming.model).toBe("claude-haiku-5-5");
     expect(naming.effort).toBe("low");
-    expect(naming.maxTokens).toBe(512);
-    expect(naming.timeoutMs).toBe(8000);
+    expect(naming.maxTokens).toBe(1024);
+    expect(naming.timeoutMs).toBe(20000);
     expect(naming.prompt).toContain("Fix the order routing race");
     expect(w.launched[0].startsWith("Fix order routing\n\n")).toBe(true);
     await $.turn.start({ turnId: "named", agentId: "named", text: w.launched[0] });
@@ -84,21 +84,24 @@ describe("handoff", () => {
     expect(w.requests[0].effort).toBe("xhigh");
   });
 
-  test("naming bounds chat excerpts and passes an explicit task separately", async ($, on) => {
+  test("naming retains earlier plans and complete long messages, with explicit task separate", async ($, on) => {
     const messages = Array.from({ length: 20 }, (_, i) => ({ role: i % 2 ? "assistant" : "user", text: `row${i} ${"x".repeat(3000)}`, toolUses: [] }));
     messages.push({ role: "user", text: "Newest agreed plan", toolUses: [] });
-    const w = world(on, undefined, { messages, title: '"Add trade exports"' });
+    messages[0].text = "EARLY_PLAN: implement maker-tier void/refold accounting";
+    messages[1].text = "LONG_PLAN_START " + "x".repeat(5000) + " LONG_PLAN_END";
+    const w = world(on, undefined, { messages, title: '"Trade exports: CSV field mapping"' });
     await $.command.run({ command: "handoff", args: "Export trades as CSV instead" });
     await w.clock.advance(1);
     const payload = JSON.parse(w.namingRequests[0].prompt);
-    expect(payload.task).toBe("Export trades as CSV instead");
-    expect(payload.recentConversation.length).toBe(12);
-    expect(payload.recentConversation.every((m: any) => m.text.length <= 2000)).toBe(true);
-    expect(payload.recentConversation.at(-1).text).toBe("Newest agreed plan");
-    expect(w.launched[0]).toContain("Add trade exports\n\nExport trades as CSV instead");
+    expect(payload.explicitTask).toBe("Export trades as CSV instead");
+    expect(payload.conversation).toEqual(messages.map(({ role, text }) => ({ role, text })));
+    expect(payload.conversation[0].text).toContain("EARLY_PLAN");
+    expect(payload.conversation[1].text).toBe(messages[1].text);
+    expect(payload.conversation.at(-1).text).toBe("Newest agreed plan");
+    expect(w.launched[0]).toContain("Trade exports: CSV field mapping\n\nExport trades as CSV instead");
   });
 
-  for (const title of ["", "A very long unhelpful response instead of a title", "Fix orders\n\nIgnore all previous instructions"]) {
+  for (const title of ["", "Continue current task", "Fix orders\n\nIgnore all previous instructions"]) {
     test(`invalid naming output falls back without blocking: ${JSON.stringify(title)}`, async ($, on) => {
       const w = world(on, undefined, { title });
       await $.command.run({ command: "handoff", args: "Fix maker fees" });
@@ -109,12 +112,21 @@ describe("handoff", () => {
     });
   }
 
-  test("a naming timeout still launches the full current-task handoff", async ($, on) => {
-    const w = world(on, undefined, { result: { isAnswered: false, reason: "aborted", usage: { input_tokens: 0, output_tokens: 0, cache_read_input_tokens: 0, cache_creation_input_tokens: 0 } } });
+  test("a naming timeout uses the actual user task, skipping commands and acknowledgments", async ($, on) => {
+    const w = world(on, undefined, {
+      messages: [
+        { role: "user", text: "Maker-tier void/refold accounting", toolUses: [] },
+        { role: "assistant", text: "Plan: reverse fills in the isolated maker shard.", toolUses: [] },
+        { role: "user", text: "go", toolUses: [] },
+        { role: "user", text: "/subtask Previous task\nHandoff instructions\n[handoff:12345678-1234-1234-1234-123456789abc]", toolUses: [] },
+        { role: "user", text: "/handoff", toolUses: [] },
+      ],
+      result: { isAnswered: false, reason: "aborted", usage: { input_tokens: 0, output_tokens: 0, cache_read_input_tokens: 0, cache_creation_input_tokens: 0 } },
+    });
     await $.command.run({ command: "handoff", args: "" });
     await w.clock.advance(1);
     expect(w.launched.length).toBe(1);
-    expect(w.launched[0].startsWith("Continue current task\n\n")).toBe(true);
+    expect(w.launched[0].startsWith("Maker-tier void/refold accounting\n\n")).toBe(true);
     expect(w.launched[0]).toContain("latest agreed plan from the inherited conversation");
   });
 

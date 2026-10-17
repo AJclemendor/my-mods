@@ -22,7 +22,7 @@ class Handler(http.server.BaseHTTPRequestHandler):
         agent = body.get('model') == 'claude-opus-5-5' and bool(body.get('tools'))
         first = agent and not first_handoff.is_set()
         naming = body.get('model') == 'claude-haiku-5-5' and not body.get('tools')
-        reply = 'Fix order routing' if naming else 'HANDOFF_DONE' if agent else 'MAIN_OR_SUBTASK_REPLY'
+        reply = 'Order routing race condition repair' if naming else 'HANDOFF_DONE' if agent else 'MAIN_OR_SUBTASK_REPLY'
         requests.append(body)
         (ROOT / 'requests.json').write_text(json.dumps(requests, indent=2))
         if first:
@@ -99,7 +99,7 @@ try:
     click('[ Close ]')
     command('/handoff')
     wait_until(first_handoff.is_set, 'first configured handoff')
-    wait_for('fix-order-routing')
+    wait_for('order-routing-race')
     naming = [r for r in requests if r.get('model') == 'claude-haiku-5-5' and not r.get('tools')]
     assert len(naming) == 1, naming
     assert 'HANDOFF_PARENT_CONTEXT' in json.dumps(naming[0]['messages'])
