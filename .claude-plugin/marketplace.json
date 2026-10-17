@@ -19,6 +19,31 @@
       "name": "sidebar-controls",
       "source": "./plugins/sidebar-controls",
       "description": "Move Compact tools and Live thinking controls into a top-right sidebar."
+    },
+    {
+      "name": "btw-chat",
+      "source": "./plugins/btw-chat",
+      "description": "An ongoing, resettable side chat that refreshes from the main session on every question."
+    },
+    {
+      "name": "plugin-h",
+      "source": "./plugins/plugin-h",
+      "description": "Toggle the bottom plugin strip completely off or back on with /plugin-h."
+    },
+    {
+      "name": "buddy",
+      "source": "./plugins/claude-buddy",
+      "description": "Claude Buddy: progress summaries, persistent observations, and an ongoing side conversation."
+    },
+    {
+      "name": "handoff",
+      "source": "./plugins/handoff",
+      "description": "Preconfigured /subtask with saved model and effort, one new worktree, and a PR against main."
+    },
+    {
+      "name": "prompt-nav",
+      "source": "./plugins/prompt-nav",
+      "description": "Prev chat and Next chat jump between your prompts and stay still at the end of the conversation."
     }
   ]
 }

@@ -1,0 +1,8 @@
+{
+  "name": "handoff",
+  "version": "0.1.3",
+  "description": "Hand a task to a native context-sharing subtask with saved model and effort, one worktree, and a PR against main.",
+  "author": { "name": "AJclemendor" },
+  "repository": "https://github.com/AJclemendor/my-mods",
+  "keywords": ["handoff", "subtask", "worktree", "commands"]
+}

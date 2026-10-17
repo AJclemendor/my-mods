@@ -1,0 +1,12 @@
+{
+  "name": "plugin-h",
+  "version": "0.1.0",
+  "description": "Hide or restore the bottom plugin strip, including its collapsed hint, with /plugin-h.",
+  "author": { "name": "AJclemendor" },
+  "dependencies": [
+    { "name": "compact-tools", "version": "^0.1.2" },
+    { "name": "live-thinking", "version": "^0.1.2" },
+    { "name": "sidebar-controls", "version": "^0.1.0" },
+    { "name": "buddy", "version": "^0.1.0" }
+  ]
+}

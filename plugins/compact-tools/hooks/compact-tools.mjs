@@ -1,5 +1,5 @@
 const enabledState = { plugin: "compact-tools", key: "enabled" };
-const supported = new Set(["Bash", "Read", "Edit", "Write"]);
+const supported = new Set(["Bash", "Read", "Edit", "Write", "WebFetch"]);
 
 export function register(on) {
   on("session.start", async ($, e, next) => {
@@ -121,9 +121,11 @@ function mcpResultLabel(output, failed) {
 function toolLabel(p) {
   const input = p.input;
   if (!input || typeof input !== "object") return null;
-  const label = p.tool === "Bash" ? input.description || input.command : input.file_path;
+  const label = p.tool === "Bash" ? input.description || input.command
+    : p.tool === "WebFetch" ? input.url : input.file_path;
   if (typeof label !== "string") return null;
-  return `${p.isErrored ? "✗" : "●"} ${p.tool}(${oneLine(label)})${p.isRunning ? " · Running…" : ""}`;
+  const name = p.tool === "WebFetch" ? "Fetch" : p.tool;
+  return `${p.isErrored ? "✗" : "●"} ${name}(${oneLine(label)})${p.isRunning ? " · Running…" : ""}`;
 }
 
 function oneLine(value) {
@@ -167,6 +169,11 @@ function bashErrorLabel(output) {
 function resultLabel(tool, output) {
   if (!output || typeof output !== "object") return null;
   if (output.staged || output.interrupted) return null;
+  if (tool === "WebFetch") {
+    if (typeof output.result !== "string") return null;
+    const lines = output.result.split(/\r?\n/).map(oneLine).filter(Boolean);
+    return `${lines[0] || "No output"}${lines.length > 1 ? ` … +${lines.length - 1} lines` : ""}`;
+  }
   if (tool === "Bash") {
     if (typeof output.stdout !== "string" || typeof output.stderr !== "string") return null;
     const lines = [output.stderr, output.stdout].join("\n")

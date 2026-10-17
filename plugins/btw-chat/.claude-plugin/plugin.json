@@ -1,0 +1,9 @@
+{
+  "name": "btw-chat",
+  "version": "0.1.0",
+  "description": "Keep a resettable side conversation with the latest main-session context in a sidebar tab.",
+  "author": { "name": "AJclemendor" },
+  "repository": "https://github.com/AJclemendor/my-mods",
+  "homepage": "https://github.com/AJclemendor/my-mods",
+  "keywords": ["terminal", "sidebar", "btw", "chat"]
+}

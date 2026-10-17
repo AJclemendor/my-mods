@@ -7,6 +7,19 @@ Claude Code mods by AJclemendor.
 | [compact-tools](plugins/compact-tools) | Compact tool output, including MCP calls and Bash errors. |
 | [live-thinking](plugins/live-thinking) | Stream thinking summaries inline in the conversation. |
 | [sidebar-controls](plugins/sidebar-controls) | Put both ON/OFF controls in a top-right sidebar. |
+| [btw-chat](plugins/btw-chat) | Keep an ongoing, resettable side chat with fresh main-session context. |
+| [Claude Buddy](plugins/claude-buddy) | Summarize progress, flag consequential details, and answer side questions. |
+| [plugin-h](plugins/plugin-h) | Hide or restore the bottom plugin strip, including its collapsed hint. |
+| [prompt-nav](plugins/prompt-nav) | Prev chat / Next chat jump between your prompts; Next chat stays still at the bottom. |
+| [handoff](plugins/handoff) | `/handoff` runs a context-sharing subtask with saved model and effort, one new worktree, and a PR against main. |
+
+## Hide the bottom plugin strip
+
+Load `./plugins/plugin-h` alongside the terminal mods. `/plugin-h` toggles the
+strip completely off and back on; `/plugin-h hide` and `/plugin-h show` set it
+explicitly. This includes the “plugin panel hidden” hint. The preference survives
+restart per account, while Buddy's sidebar and inline tool/thinking output stay
+available. See the [plugin-h README](plugins/plugin-h) for details.
 
 ## Install compact-tools
 
@@ -44,16 +57,29 @@ It works on the main conversation and can run alongside compact-tools or by itse
 /reload-plugins
 ```
 
-This separate plugin installs compatible versions of compact-tools and live-thinking and moves their buttons into a 28-column sidebar at the top right. Thinking and tool output stay inline in the conversation. Close the sidebar to return the buttons above the prompt; `/sidebar-controls on` reopens it, and `/sidebar-controls off` closes it.
+This separate plugin installs compatible versions of compact-tools and live-thinking and moves their buttons into a 30-column sidebar at the top right. Thinking and tool output stay inline in the conversation. Close the sidebar to return the buttons above the prompt; `/sidebar-controls on` reopens it, and `/sidebar-controls off` closes it.
 
 Claude automatically shows the sidebar in wide fullscreen terminals, normally from 144 columns. If it is waiting for space, the original buttons remain available. Running `/sidebar-controls on` explicitly opens it: fullscreen terminals from 110 columns dock it on the right; narrower or classic terminals place it above the prompt. See the [sidebar-controls README](plugins/sidebar-controls) for details.
 
-## What it changes
+## BTW chat
+
+Load `./plugins/btw-chat` with `--plugin-dir` to put `/btw` in an ongoing sidebar conversation. Every question reads the latest main-session context and remembers earlier side exchanges. Click **Reset chat** or run `/btw reset` to clear only the side conversation. **Settings** or `/btw settings` lets you choose its model, thinking effort, reply style, and output budget. The main task keeps running, and the side chat stays out of its history. See the [BTW chat README](plugins/btw-chat) for context timing and lifetime details.
+
+## Claude Buddy
+
+Load `./plugins/claude-buddy` instead of `btw-chat` for an ongoing side chat. In **Companion** mode, **Max** shows flags and current progress, and **Log** keeps meaningful updates from long-running turns. `/claude-buddy` toggles it; `/buddy` opens it; `/buddy settings` opens the clickable model, effort, and activity controls. **Chat only (BTW)** is the default. Flags offer copying, dismissal, and Good/Bad feedback; saved feedback and review instructions are available in Settings. See the [Claude Buddy README](plugins/claude-buddy) for details.
+
+## Handoff
+
+Install `handoff@my-mods`, then run `/handoff` to hand off the current task or agreed plan with the full available conversation. Haiku 5.5 gives the thread a short task-specific name; the working agent defaults to Fable 5.1. `/handoff-settings` saves its model and effort. Every handoff is instructed to finish in one new worktree and branch from `main`, run checks, commit, push, and open a PR against `main`. An explicit task after `/handoff` is optional. See the [Handoff README](plugins/handoff).
+
+## Compact tools behavior
 
 - Bash: one result line plus a count of hidden lines, with stderr first.
 - Failed Bash calls: a red error row with the exit code when available, the first diagnostic, and a count of hidden lines.
 - Edit and Write: line counts instead of expanded diffs and file contents.
 - Text Read: number of lines read.
+- Fetch: URL without the extraction prompt, plus the first result line and a count of hidden lines.
 - MCP calls: tool name without the JSON arguments, plus the first result line and a count of hidden lines. Non-text results are counted; errors remain visibly failed.
 - Running calls: a running indicator.
 - A blank line before each tool call keeps it separate from preceding thinking or text.
@@ -110,8 +136,18 @@ claude plugin validate ./plugins/live-thinking --strict
 claude plugin test ./plugins/live-thinking
 claude plugin validate ./plugins/sidebar-controls --strict
 claude plugin test ./plugins/sidebar-controls
+claude plugin validate ./plugins/btw-chat --strict
+claude plugin test ./plugins/btw-chat
+claude plugin validate ./plugins/claude-buddy --strict
+claude plugin test ./plugins/claude-buddy
+claude plugin validate ./plugins/handoff --strict
+claude plugin test ./plugins/handoff
+claude plugin validate ./plugins/plugin-h --strict
+claude plugin test ./plugins/plugin-h
+claude plugin validate ./plugins/prompt-nav --strict
+claude plugin test ./plugins/prompt-nav
 ```
 
-For a local session with all three plugins, run `claude --plugin-dir ./plugins`. Runtime tests cover summaries, preservation of results, running states, errors, native fallback, duplicate result suppression, controls, and streaming thinking. Offline terminal replays also verify MCP success and error calls in classic and fullscreen layouts, and sidebar placement, closing, reopening, and mouse toggling.
+For a local session, load compact-tools, live-thinking, sidebar-controls, and either btw-chat or claude-buddy with separate `--plugin-dir` arguments. Runtime tests cover summaries, preservation of results, running states, errors, native fallback, duplicate result suppression, controls, and streaming thinking. Offline terminal replays also verify MCP success and error calls in classic and fullscreen layouts, sidebar controls, and the companion's monitoring and chat.
 
 [Claude marketplace documentation](https://code.claude.com/docs/en/plugin-marketplaces) · [Mods documentation](https://code.claude.com/docs/en/plugins/mods/overview)

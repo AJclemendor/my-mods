@@ -1,0 +1,16 @@
+{
+  "name": "prompt-nav",
+  "version": "0.1.2",
+  "description": "Prev chat and Next chat buttons that jump between your prompts and leave the transcript still at its end.",
+  "author": { "name": "AJclemendor" },
+  "repository": "https://github.com/AJclemendor/my-mods",
+  "homepage": "https://github.com/AJclemendor/my-mods",
+  "keywords": ["terminal", "navigation", "transcript"],
+  "types": "./types/index.d.ts",
+  "dependencies": [
+    { "name": "compact-tools", "version": "^0.1.2" },
+    { "name": "live-thinking", "version": "^0.1.2" },
+    { "name": "sidebar-controls", "version": "^0.1.0" },
+    { "name": "buddy", "version": "^0.1.5" }
+  ]
+}

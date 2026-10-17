@@ -1,6 +1,8 @@
 # Compact tools
 
-Compact Bash, Read, Edit, Write, and MCP output for Claude Code's terminal, with a visible ON/OFF toggle above the prompt. Run `/compact-tools` to toggle, or `/compact-tools on` and `/compact-tools off`.
+Compact Bash, Read, Edit, Write, Fetch, and MCP output for Claude Code's terminal, with a visible ON/OFF toggle above the prompt. Run `/compact-tools` to toggle, or `/compact-tools on` and `/compact-tools off`.
+
+Fetch calls show the URL without the extraction prompt, then the first result line and a hidden-line count. Failed or interrupted fetches keep their native details. Full prompts and results still reach Claude and remain in the transcript.
 
 Failed Bash calls show a compact red error row with their exit code when available and first diagnostic. Turn the mod off to see full error output.
 

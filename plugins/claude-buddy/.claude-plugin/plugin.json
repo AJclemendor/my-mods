@@ -1,0 +1,9 @@
+{
+  "name": "buddy",
+  "version": "0.1.11",
+  "description": "Chat with your companion, open Max for flags and current progress, or browse the separate Log tab.",
+  "author": { "name": "AJclemendor" },
+  "repository": "https://github.com/AJclemendor/my-mods",
+  "keywords": ["buddy", "sidebar", "summaries", "attention", "chat"],
+  "types": "./types/index.d.ts"
+}

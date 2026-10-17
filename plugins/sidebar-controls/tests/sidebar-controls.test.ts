@@ -16,12 +16,12 @@ const reader = {
 };
 
 describe("sidebar-controls", () => {
-  test("opening requests a 28-column pane without taking keyboard focus", async ($, on) => {
+  test("opening requests a 30-column pane without taking keyboard focus", async ($, on) => {
     let opened: unknown;
     on("ui.panes", () => ({ value: [] }));
     on("ui.open", ($, e) => { opened = e; return { value: { isPlaced: true } }; });
     await $.command.run({ command: "sidebar-controls", args: "on" });
-    expect(opened).toEqual({ id: "sidebar-controls", title: "Mod controls", columns: 28, rows: 3 });
+    expect(opened).toEqual({ id: "sidebar-controls", title: "Mod controls", columns: 30, rows: 3 });
   });
 
   test("toggle closes the controls pane without closing another pane", async ($, on) => {

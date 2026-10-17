@@ -126,6 +126,49 @@ describe("compact-tools", () => {
     await ui.unmount();
   });
 
+  test("running Fetch calls show the URL without the extraction prompt", async ($) => {
+    const input = { url: "https://docs.example.com/authentication", prompt: "PRIVATE_EXTRACTION_PROMPT\n".repeat(100) };
+    const before = JSON.stringify(input);
+    const target = toolRow("WebFetch", undefined);
+    const ui = await $.ui.mount({ ...target, props: { ...target.props, input, isRunning: true } });
+    expect((await ui.find({ type: "Text" }))?.text).toBe("● Fetch(https://docs.example.com/authentication) · Running…");
+    expect(await ui.find({ type: "Text", text: /PRIVATE_EXTRACTION_PROMPT|⎿/ })).toBeUndefined();
+    expect(JSON.stringify(input)).toBe(before);
+    await ui.unmount();
+  });
+
+  test("Fetch previews preserve content, suppress duplicate results, and toggle back to native", async ($, on) => {
+    on("ui.render", ($, e) => $.ui.resolve(e).Text({ children: "FULL NATIVE FETCH" }));
+    const input = { url: "https://docs.example.com/authentication", prompt: "PRIVATE_EXTRACTION_PROMPT" };
+    const output = { bytes: 5000, code: 200, codeText: "OK", result: "Authentication\r\n\r\nPRIVATE_DETAILS\nMore details\n", durationMs: 250, url: input.url };
+    const before = JSON.stringify({ input, output });
+    const target = toolRow("WebFetch", output);
+    const ui = await $.ui.mount({ ...target, props: { ...target.props, input } });
+    const result = await $.ui.mount({
+      plugin: "compact-tools", surface: "terminal", component: "ToolResult",
+      props: { tool_use_id: "WebFetch", tool: "WebFetch", output, isErrored: false },
+    });
+    expect((await ui.find({ type: "Text", text: /Fetch/ }))?.text).toBe("● Fetch(https://docs.example.com/authentication)");
+    expect((await ui.find({ type: "Text", text: /⎿/ }))?.text).toBe("  ⎿ Authentication … +2 lines");
+    expect(await ui.find({ type: "Text", text: /PRIVATE/ })).toBeUndefined();
+    expect(await result.find({ type: "Text" })).toBeUndefined();
+    await $.command.run({ command: "compact-tools", args: "off" });
+    expect((await ui.find({ type: "Text" }))?.text).toBe("FULL NATIVE FETCH");
+    expect((await result.find({ type: "Text" }))?.text).toBe("FULL NATIVE FETCH");
+    await $.command.run({ command: "compact-tools", args: "on" });
+    expect((await ui.find({ type: "Text", text: /⎿/ }))?.text).toBe("  ⎿ Authentication … +2 lines");
+    expect(JSON.stringify({ input, output })).toBe(before);
+    await result.unmount();
+    await ui.unmount();
+  });
+
+  test("Fetch with empty content has an explicit empty result", async ($) => {
+    const target = toolRow("WebFetch", { bytes: 0, code: 200, codeText: "OK", result: "\n\t", durationMs: 20, url: "https://example.com" });
+    const ui = await $.ui.mount({ ...target, props: { ...target.props, input: { url: "https://example.com", prompt: "Summarize" } } });
+    expect((await ui.find({ type: "Text", text: /⎿/ }))?.text).toBe("  ⎿ No output");
+    await ui.unmount();
+  });
+
   test("other errors, unknown Bash errors, and staged edits retain native details", async ($, on) => {
     on("ui.render", ($, e) => $.ui.resolve(e).Text({ children: "NATIVE DETAILS" }));
     for (const props of [
@@ -135,6 +178,9 @@ describe("compact-tools", () => {
       { tool_use_id: "interrupted-session", tool: "Bash", output: "[Tool call interrupted: the session ended before this call's result was recorded, so its outcome is unknown.]", isErrored: true },
       { tool_use_id: "staged", tool: "Edit", output: { staged: true, structuredPatch: [] }, isErrored: false },
       { tool_use_id: "unknown", tool: "NewTool", output: {}, isErrored: false },
+      { tool_use_id: "fetch-error", tool: "WebFetch", output: "Request failed with status code 403", isErrored: true },
+      { tool_use_id: "fetch-interrupted", tool: "WebFetch", output: "[Request interrupted by user for tool use]", isErrored: true },
+      { tool_use_id: "fetch-unknown", tool: "WebFetch", output: { unexpected: true }, isErrored: false },
     ]) {
       const ui = await $.ui.mount({ plugin: "compact-tools", surface: "terminal", component: "ToolResult", props });
       expect((await ui.find({ type: "Text" }))?.text).toBe("NATIVE DETAILS");
