@@ -11,7 +11,15 @@ const recordKey = (flag: any) => `flag:${JSON.stringify(["/fixture", flag.key, f
 const pane = (surface: "terminal" | "desktop" = "terminal") => ({ plugin: "flags", surface, component: "Pane" as const, requestId: "flags",
   props: { title: "Flags", isFocused: true, bodyColumns: 54, placement: surface === "desktop" ? "inline" as const : "dock" as const, scroll: { offset: 0, bodyRows: 45 }, view: {} } });
 function host(on: any, saved: any = {}, customStore = false) {
-  if (!customStore) mock.store(on, saved);
+  const stored: Record<string, any> = structuredClone(saved);
+  if (!customStore) {
+    // Match the production store's key limit; mock.store does not enforce it.
+    const checkKey = (key: string) => { if (!key || key.length > 256) throw new Error("Store key exceeds 256 characters"); };
+    on("store.keys", () => ({ value: Object.keys(stored) }));
+    on("store.get", ($: any, e: any) => { checkKey(e.key); return { value: structuredClone(stored[e.key]) }; });
+    on("store.set", ($: any, e: any) => { checkKey(e.key); stored[e.key] = structuredClone(e.value); return { value: undefined }; });
+    on("store.delete", ($: any, e: any) => { checkKey(e.key); delete stored[e.key]; return { value: undefined }; });
+  }
   mock.env(on, { HOME: "/fixture" });
   const clock = mock.clock(on);
   const opened: any[] = [], closed: any[] = [];
@@ -28,10 +36,36 @@ function host(on: any, saved: any = {}, customStore = false) {
   on("turn.start", ($: any, e: any) => ({ turnId: e.turnId }));
   on("turn.complete", () => ({ text: "" }));
   on("session.messages", () => ({ value: state.messages }));
-  return { clock, opened, closed, state };
+  return { clock, opened, closed, state, stored };
 }
 
 for (const surface of ["terminal", "desktop"] as const) describe(`Flags on ${surface}`, () => {
+  test("long flags can be dismissed and rated within the production storage limit", async ($, on) => {
+    const h = host(on);
+    const flags = ["dismiss", "good", "bad"].map(action => ({
+      key: action, kind: "attention", text: `Important ${action}: ${"Long detailed finding. ".repeat(30).trim()}`,
+      evidence: `Evidence for ${action}: ${"Detailed supporting quote. ".repeat(20).trim()}`,
+    }));
+    h.state.messages = [message(flags.map(f => f.evidence).join("\n"))];
+    on("model.fork", () => ({ value: answer(flags) }));
+    const ui = await $.ui.mount(pane(surface));
+    await $.command.run({ command: "flags", args: "check" });
+    for (const flag of flags) {
+      expect(recordKey(flag).length > 256).toBe(true);
+      await ui.press({ key: `${flag.key}:${flag.key}` });
+      expect(await ui.find({ key: `dismiss:${flag.key}` })).toBeUndefined();
+    }
+    const entries = Object.entries(h.stored).filter(([key]) => key.startsWith("flag:"));
+    expect(entries.length).toBe(3);
+    for (const [key, entry] of entries) {
+      expect(key.length <= 256).toBe(true);
+      expect(entry.flag).toEqual(flags.find(f => f.key === entry.action));
+    }
+    await $.command.run({ command: "flags", args: "check" });
+    expect(await ui.find({ type: "Text", text: "No flags to review." })).toBeDefined();
+    await ui.unmount();
+  });
+
   test("one review shows multiple flags, copy is plain, and Good/Bad immediately save and dismiss", async ($, on) => {
     host(on);
     let calls = 0; const copies: any[] = [], prompts: any[] = [];
@@ -94,7 +128,7 @@ describe("Flag review state", () => {
     expect(await ui.find({ key: "dismiss:scope" })).toBeDefined();
     expect(await ui.find({ type: "Text", text: /Could not save this action/ })).toBeDefined();
     fail = false; await ui.press({ key: "good:scope" });
-    expect(stored[recordKey(first)].action).toBe("good");
+    expect(Object.values(stored).find((entry: any) => entry.flag?.key === first.key)?.action).toBe("good");
     expect(await ui.find({ key: "dismiss:scope" })).toBeUndefined();
     await ui.unmount();
   });
@@ -163,7 +197,7 @@ describe("Flag review state", () => {
     expect(payload(requests[0].prompt).mainConversation[0].text).toContain(third.evidence);
     await ui.press({ key: "settings" }); await ui.press({ key: "prompt" }); await ui.press({ key: "copy-path" });
     expect(writes[0].path).toBe("/fixture/.claude/flags/review-guidance.txt");
-    expect(writes[0].text).toContain(first.text); expect(writes[0].text).toContain("Raise every independently useful");
+    expect(writes[0].text).toContain(first.text); expect(writes[0].text).toContain("Return only JSON");
     expect(copies[0]).toEqual({ text: writes[0].path, surface: "desktop" });
     await ui.unmount();
   });

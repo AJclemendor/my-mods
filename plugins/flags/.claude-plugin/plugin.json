@@ -1,6 +1,6 @@
 {
   "name": "flags",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "A focused sidebar for consequential flags, with Good, Bad, Dismiss, and Copy.",
   "author": {
     "name": "AJclemendor"

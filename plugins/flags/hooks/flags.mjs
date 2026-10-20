@@ -6,7 +6,13 @@ const defaults = { enabled: true, model: "main", effort: "default", cadence: "30
 const labels = { attention: "Heads up", decision: "Your decision", insight: "You should know", uncertain: "Uncertain" };
 const supported = surface => surface === "terminal" || surface === "desktop";
 const redraw = $ => $.ui.invalidate("ui.render");
-const recordKey = (scope, flag) => `flag:${JSON.stringify([scope, flag.key, flag.text, flag.evidence])}`;
+async function recordKey(scope, flag) {
+  // Claude caps store keys at 256 characters. Keep full text in the value;
+  // a fixed-size digest identifies it regardless of quote or project length.
+  const identity = JSON.stringify([scope, flag.key, flag.text, flag.evidence]);
+  const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(identity));
+  return `flag:v2:${Array.from(new Uint8Array(digest), byte => byte.toString(16).padStart(2, "0")).join("")}`;
+}
 
 export function register(on) {
   const s = { prefs: null, loading: null, scope: "", records: [], flags: [], context: [], page: "flags", error: "", notice: "",
@@ -220,7 +226,7 @@ async function act($, s, flag, action) {
   s.writing = true; s.generation++; s.error = "";
   try {
     const entry = { scope: s.scope, flag, action };
-    const key = recordKey(s.scope, flag);
+    const key = await recordKey(s.scope, flag);
     // One write commits both rating and dismissal. Independent keys prevent a
     // read/modify/write of an entire feedback array from losing another flag.
     await $.store.set(key, entry);
