@@ -8,6 +8,7 @@ Claude Code mods by AJclemendor.
 | [live-thinking](plugins/live-thinking) | Stream thinking summaries inline in the conversation. |
 | [sidebar-controls](plugins/sidebar-controls) | Put both ON/OFF controls in a top-right sidebar. |
 | [btw-chat](plugins/btw-chat) | Keep an ongoing, resettable side chat with fresh main-session context. |
+| [Flags](plugins/flags) | A focused flag sidebar with Good, Bad, Dismiss, and Copy; saved feedback and dismissals. |
 | [Claude Buddy](plugins/claude-buddy) | Summarize progress, flag consequential details, and answer side questions. |
 | [plugin-h](plugins/plugin-h) | Hide or restore the bottom plugin strip, including its collapsed hint. |
 | [prompt-nav](plugins/prompt-nav) | Prev chat / Next chat jump between your prompts; Next chat stays still at the bottom. |

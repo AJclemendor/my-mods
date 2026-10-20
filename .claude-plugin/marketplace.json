@@ -44,6 +44,11 @@
       "name": "prompt-nav",
       "source": "./plugins/prompt-nav",
       "description": "Prev chat and Next chat jump between your prompts and stay still at the end of the conversation."
+    },
+    {
+      "name": "flags",
+      "source": "./plugins/flags",
+      "description": "A focused flags sidebar with saved Good/Bad feedback, dismissal, and copying."
     }
   ]
 }
