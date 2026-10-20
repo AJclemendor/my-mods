@@ -4,6 +4,8 @@ import { latestModels } from "./models.mjs";
 const pane = { id: "flags", title: "Flags", columns: 54, rows: 22 };
 const defaults = { enabled: true, model: "main", effort: "default", cadence: "30" };
 const labels = { attention: "Heads up", decision: "Your decision", insight: "You should know", uncertain: "Uncertain" };
+const importanceLabels = { green: "Low", yellow: "Medium", red: "High" };
+const importanceColor = flag => Object.hasOwn(importanceLabels, flag.importance) ? flag.importance : "yellow";
 const supported = surface => surface === "terminal" || surface === "desktop";
 const redraw = $ => $.ui.invalidate("ui.render");
 async function recordKey(scope, flag) {
@@ -276,8 +278,8 @@ function render($, e, s) {
     body.push(row([Text({ bold: true, children: `Flags${s.flags.length ? ` (${s.flags.length})` : ""}` }),
       Button({ key: "settings", label: "Settings", onPress: async () => { await catalog($, s); go("settings"); } })]));
     if (!s.flags.length) body.push(Text({ dimColor: true, children: "No flags to review." }));
-    for (const flag of s.flags) body.push(Box({ flexDirection: "column", gap: 1, ...(e.surface === "desktop" ? { borderStyle: "round", borderDimColor: true, padding: "sm" } : {}), children: [
-      Text({ bold: true, children: labels[flag.kind] }), Text({ children: flag.text }), Text({ dimColor: true, children: flag.evidence }),
+    for (const flag of s.flags) body.push(Box({ flexDirection: "column", gap: 1, ...(e.surface === "desktop" ? { borderStyle: "round", borderColor: importanceColor(flag), padding: "sm" } : {}), children: [
+      Text({ bold: true, color: importanceColor(flag), children: `${importanceLabels[importanceColor(flag)]} importance · ${labels[flag.kind]}` }), Text({ children: flag.text }), Text({ dimColor: true, children: flag.evidence }),
       row([Button({ key: `good:${flag.key}`, label: "Good", onPress: () => act($, s, flag, "good") }),
         Button({ key: `bad:${flag.key}`, label: "Bad", onPress: () => act($, s, flag, "bad") }),
         Button({ key: `dismiss:${flag.key}`, label: "Dismiss", onPress: () => act($, s, flag, "dismiss") }),

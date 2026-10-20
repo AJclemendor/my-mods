@@ -40,6 +40,37 @@ function host(on: any, saved: any = {}, customStore = false) {
 }
 
 for (const surface of ["terminal", "desktop"] as const) describe(`Flags on ${surface}`, () => {
+  test("model-assigned importance colors survive rendering and feedback without entering copied text", async ($, on) => {
+    const h = host(on);
+    const flags = [{ ...first, importance: "green" }, { ...second, importance: "yellow" }, { ...third, importance: "red" }];
+    on("model.fork", () => ({ value: answer(flags) }));
+    const copies: any[] = [];
+    on("ui.copy", ($, e) => { copies.push(e); return { value: { isCopied: true } }; });
+    const ui = await $.ui.mount(pane(surface));
+    await $.command.run({ command: "flags", args: "check" });
+    for (const flag of flags) {
+      const heading = await ui.find({ type: "Text", text: new RegExp(`^${({ green: "Low", yellow: "Medium", red: "High" })[flag.importance]} importance`) });
+      expect(heading).toMatchObject({ props: { color: flag.importance } });
+    }
+    expect((await ui.find({ type: "Text", text: /importance · Heads up$/ }))?.text).toContain("Low importance");
+    expect((await ui.find({ type: "Text", text: /importance · Uncertain$/ }))?.text).toContain("Medium importance");
+    expect((await ui.find({ type: "Text", text: /importance · Your decision$/ }))?.text).toContain("High importance");
+    await ui.press({ key: "copy:decision" });
+    expect(copies[0].text).toBe(`${third.text}\n\n${third.evidence}`);
+    await ui.press({ key: "good:decision" });
+    expect(Object.values(h.stored).find((r: any) => r.action === "good")?.flag.importance).toBe("red");
+    await ui.unmount();
+  });
+  test("legacy and invalid importance fall back to yellow", async ($, on) => {
+    host(on);
+    on("model.fork", () => ({ value: answer([first, { ...second, importance: "purple" }]) }));
+    const ui = await $.ui.mount(pane(surface));
+    await $.command.run({ command: "flags", args: "check" });
+    expect((await ui.find({ type: "Text", text: /importance · Heads up$/ }))?.props.color).toBe("yellow");
+    expect((await ui.find({ type: "Text", text: /importance · Uncertain$/ }))?.props.color).toBe("yellow");
+    await ui.unmount();
+  });
+
   test("long flags can be dismissed and rated within the production storage limit", async ($, on) => {
     const h = host(on);
     const flags = ["dismiss", "good", "bad"].map(action => ({

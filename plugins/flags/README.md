@@ -10,6 +10,8 @@ A standalone, focused flag sidebar for Claude Code's terminal and local Code ses
 
 The sidebar opens automatically while enabled. `/flags off` stops monitoring and closes it; `/flags on` reopens it. `/flags settings` opens Settings, and `/flags check` requests a review immediately.
 
+Claude assigns each flag an importance color: **green / Low** for useful but non-urgent information, **yellow / Medium** for important issues to address soon, and **red / High** for major consequences needing attention now. The heading carries both color and text; Desktop cards also have a matching border. Importance does not relax the novelty requirement. Missing or invalid model importance uses yellow. Saved feedback retains the assigned importance, while copying still includes only the flag and quote.
+
 Every card has four actions:
 
 - **Good**: save a positive example for future reviews and dismiss the flag.

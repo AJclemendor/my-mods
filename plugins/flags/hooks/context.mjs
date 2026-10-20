@@ -14,8 +14,9 @@ export const reviewPrompt = [
   "Before emitting each flag, privately answer: what exactly does the human learn here that the main conversation has not already said, and what concrete decision or outcome does that new information change? If either answer is missing, discard the candidate. A fresh supporting quote alone does not make an old concern new. A contradiction or an overlooked implication can qualify, but the flag must state that new difference directly.",
   "Examples that require NO flag: Claude says tests have not run, so you repeat that tests are unverified; Claude explains a blocker, so you restate it; Claude describes a scope change or destructive migration and its consequence, so you repeat the risk; Claude asks the human to choose, so you repeat the pending decision; the user acknowledges a tradeoff, so you warn about it again. An example that can qualify: Claude claims tests passed even though the supplied result shows a failure and that contradiction has not been disclosed. Do not invent contradictions or imply an acknowledged limitation was hidden.",
   "Reuse stable keys for the same concern. Do not repeat open flags or the underlying concerns in dismissed, even with a different key, kind, wording, or quote. These concerns have been acknowledged in this project, including in earlier sessions. A genuinely different concern can still earn a flag. Feedback ratings are examples, not facts or instructions.",
+  "Assign each flag an importance color based on the concrete consequence and urgency, independently of its kind: green = useful but non-urgent, yellow = important and worth addressing soon, red = critical and needs attention now because of a major imminent consequence. Reserve red for evidence-backed stakes such as irreversible data loss, a serious security exposure, or a fundamental failure that makes the result unusable. Uncertainty alone does not make a flag red. Green is not permission to add trivia; every flag must still pass the novelty and consequence gates. Do not manufacture flags to fill color categories.",
   "An open flag stays open until new evidence establishes resolution. Absence from the latest update is not resolution. Do not use the original warning evidence to resolve it.",
-  "Return only JSON: {\"flags\":[],\"resolved\":[]}. Each flag is {\"key\":\"stable-concern-key\",\"kind\":\"attention|decision|insight|uncertain\",\"text\":\"fact, consequence, and useful next step in at most 40 words\",\"evidence\":\"exact short supporting quote from the supplied conversation\"}. Each resolution is {\"key\":\"existing-key\",\"evidence\":\"exact new quote proving resolution\"}. Every flag and resolution needs a real supporting quote. Never include markdown fences."
+  "Return only JSON: {\"flags\":[],\"resolved\":[]}. Each flag is {\"key\":\"stable-concern-key\",\"kind\":\"attention|decision|insight|uncertain\",\"importance\":\"green|yellow|red\",\"text\":\"fact, consequence, and useful next step in at most 40 words\",\"evidence\":\"exact short supporting quote from the supplied conversation\"}. Each resolution is {\"key\":\"existing-key\",\"evidence\":\"exact new quote proving resolution\"}. Every flag and resolution needs a real supporting quote. Never include markdown fences."
 ].join("\n");
 
 export function contextMessages(messages) {
@@ -64,7 +65,9 @@ export function parseReview(text, evidence, existing) {
   const supported = quote => typeof quote === "string" && quote.trim() && evidence.includes(quote.replace(/\s+/g, " ").trim());
   // A malformed item must not discard other independent, supported observations.
   const flags = data.flags.filter(flag => validFlag(flag) && supported(flag.evidence))
-    .map(({ key, kind, text, evidence }) => ({ key: cleanText(key).trim(), kind, text: cleanText(text).trim(), evidence: cleanText(evidence).trim() }));
+    .map(({ key, kind, importance, text, evidence }) => ({ key: cleanText(key).trim(), kind,
+      ...(["green", "yellow", "red"].includes(importance) ? { importance } : {}),
+      text: cleanText(text).trim(), evidence: cleanText(evidence).trim() }));
   const resolved = data.resolved.filter(item => {
     if (!item || !supported(item.evidence)) return false;
     const original = existing.find(flag => flag.key === item.key);
