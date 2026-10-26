@@ -1,6 +1,6 @@
 import { describe, expect, mock, test } from "claude-code/testing";
 
-const PANE = {
+const PANE_TEMPLATE = {
   plugin: "handoff", surface: "terminal", component: "Pane", requestId: "handoff-settings",
   props: { title: "Handoff settings", isFocused: true, bodyColumns: 58, placement: "dock", scroll: { offset: 0, bodyRows: 45 }, view: {} },
 } as const;
@@ -38,7 +38,9 @@ async function step($: any, agentId?: string, index = 0) {
   return chunks;
 }
 
-describe("handoff", () => {
+for (const surface of ["terminal", "desktop"] as const) {
+const PANE = { ...PANE_TEMPLATE, surface };
+describe(`handoff on ${surface}`, () => {
   test("bare and whitespace-only handoffs launch the current task from inherited context", async ($, on) => {
     const w = world(on);
     for (const args of ["", "  \n  "]) {
@@ -236,3 +238,5 @@ describe("handoff", () => {
     await ui.unmount();
   });
 });
+
+}

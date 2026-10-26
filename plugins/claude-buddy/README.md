@@ -4,6 +4,12 @@ A sidebar companion for an active Claude Code session. By default it is a side c
 
 The plugin's install ID is `buddy`; Claude Code reserves plugin IDs beginning with `claude-`. Its sidebar title is **Claude Buddy**, and its toggle command is `/claude-buddy`.
 
+## Desktop and terminal
+
+Version 0.1.12 supports both the terminal and local sessions in Claude Desktop's **Code** tab. Install `buddy@my-mods` and run `/reload-plugins`, then `/buddy`. The Desktop pane has padded content, wrapping tabs, labeled You/Max messages, a multiline composer, and naturally scrolling chat history. Max, Log, settings, feedback, and clipboard actions work on both surfaces. It does not customize the app's regular Chat or Cowork interfaces.
+
+Desktop connections can arrive after the engine starts; Buddy begins monitoring when Desktop attaches and pauses automatic checks when no supported interface remains attached. A second connection does not steal the pane from another mod. Saved settings continue to use the same Claude profile.
+
 ## Use
 
 - `/claude-buddy`: toggle Buddy on or off.
@@ -15,7 +21,7 @@ The plugin's install ID is `buddy`; Claude Code reserves plugin IDs beginning wi
 - `/buddy settings`: open model and cadence settings.
 - `/buddy reset`: reset the side conversation, keeping observations and settings.
 
-Buddy only opens as a vertical dock. If the terminal becomes too narrow and would place Buddy above the prompt, Buddy closes its pane and pauses automatic reviews. It resumes when the fullscreen terminal has enough room to dock it again, preserving chat, flags, and settings. Classic terminal layout stays paused. Turning Buddy off yourself keeps it off after resizing.
+In the terminal, Buddy only opens as a vertical dock. If the terminal becomes too narrow and would place Buddy above the prompt, Buddy closes its pane and pauses automatic reviews. It resumes when the fullscreen terminal has enough room to dock it again, preserving chat, flags, and settings. Classic terminal layout stays paused. Desktop uses the app's own pane layout instead of terminal width rules. Turning Buddy off yourself keeps it off after resizing or reconnecting.
 
 The Mod controls pane has a **Claude Buddy: ON/OFF** button and an observation count. Without that pane, the button appears above the main prompt. Closing Buddy's pane switches monitoring off. Returning with `/buddy` catches up on new activity. While Buddy is on, `/btw` opens its chat; when it is off, `/btw` uses Claude's native overlay.
 
@@ -31,7 +37,7 @@ The pane has three tabs in Companion mode, with configuration behind **Settings*
 
 New flags and current-status updates mark Max; new log entries mark Log; new chat replies mark Chat. Each tab clears its own unread indicator when opened. Buddy never switches tabs for an automatic update. The count on Max is the number of open flags. **Settings** controls mode, model, effort, cadence, and reply style. Chat only mode shows just **Chat** and **Settings**.
 
-With Prompt nav enabled, **Prev chat** and **Next chat** sit above Buddy's tabs on Chat, Max, and Log. Buddy reserves space for that row so focusing its input keeps the navigation visible.
+In the terminal, with Prompt nav enabled, **Prev chat** and **Next chat** sit above Buddy's tabs on Chat, Max, and Log. Buddy reserves space for that row so focusing its input keeps the navigation visible. Prompt nav is a separate terminal-only plugin.
 
 **Log** is separate from the current status in **Now**. A main turn must run for at least one minute before it can contribute a log entry, including its final result. Short lookups and the time spent waiting between turns do not qualify; Update now does not bypass this rule. Even during a long turn, an entry needs a useful new milestone, consequential discovery or decision, verified result, or actual blocker. Routine reads, heading and priority inventories, file sizes, plans to begin, drafting status, and waiting for the next instruction should produce no entry. An empty log is fine.
 

@@ -23,13 +23,14 @@ const replyShape = {
 const chatQueueLimit = 5;
 const flagLimit = 10;
 const logAfterMs = 60_000;
+const supportedSurface = surface => surface === "terminal" || surface === "desktop";
 
 export function register(on) {
   const state = {
     prefs: null, enabled: false, page: "information", previousPage: "information", summary: "", summaryAt: 0, updates: [], flags: [], dismissed: [], known: [],
     history: [], draft: "", summaryError: "", chatError: "", settingsError: "", flagCopy: null, auto: null, chat: null, chatQueue: [], timer: null,
     revision: 0, reviewed: -1, reviewedSnapshot: null, activityVersion: 0, mainTurn: null, workTurn: null, logHistory: [], activity: new Map(), context: [], flagIndex: 0, chatPage: 0, unseen: {}, urgent: false, headless: false,
-    catalog: [], catalogLoaded: false, catalogStatus: "", spacePaused: false, layout: null, layoutTimer: null, dockColumns: 0,
+    catalog: [], catalogLoaded: false, catalogStatus: "", spacePaused: false, layout: null, layoutTimer: null, dockColumns: 0, desktop: false,
     feedback: [], feedbackDraft: null, feedbackVersion: 0, feedbackBusy: false, feedbackError: "", promptCopy: null,
   };
 
@@ -38,11 +39,22 @@ export function register(on) {
     await load($, state);
     await $.command.register({ name: "claude-buddy", description: "Toggle Buddy or ask a side question", argumentHint: "[on|off|companion|chat|settings|update|reset|question]", immediate: true });
     await $.command.register({ name: "buddy", description: "Open Claude Buddy or ask a side question", argumentHint: "[question|companion|chat|settings]", immediate: true });
-    state.headless = !(await $.session.surfaces()).includes("terminal");
-    if (!state.headless && state.enabled && !state.spacePaused) {
-      await $.ui.open(pane);
-      schedule($, state, 1000);
-    }
+    await refreshSurfaces($, state, true);
+    return result;
+  });
+
+  // Desktop attaches to an SDK session after its headless startup. Refresh the
+  // roster when clients arrive or leave, rather than latching startup's surface.
+  on("session.attach", async ($, e, next) => {
+    const result = await next(e);
+    await load($, state);
+    await refreshSurfaces($, state, supportedSurface(e.surface));
+    return result;
+  });
+  on("session.detach", async ($, e, next) => {
+    const result = await next(e);
+    await load($, state);
+    await refreshSurfaces($, state, false);
     return result;
   });
 
@@ -136,12 +148,12 @@ export function register(on) {
   // Do not subscribe to transcript rows: every sidebar invalidation would redraw
   // the entire conversation as well.
   on("ui.render", { component: ["AbovePrompt", "PromptHint", "Pane"] }, async ($, e, next) => {
-    if (e.surface === "terminal") { await load($, state); observeLayout($, state, e); }
+    if (supportedSurface(e.surface)) { await load($, state); observeLayout($, state, e); }
     return next(e);
   });
 
   on("ui.render", { component: "Pane", requestId: "claude-buddy" }, async ($, e, next) => {
-    if (e.surface !== "terminal") return next(e);
+    if (!supportedSurface(e.surface)) return next(e);
     await load($, state);
     if (state.spacePaused) return $.ui.resolve(e).Box({});
     return renderPane($, e, state);
@@ -150,9 +162,9 @@ export function register(on) {
   on("ui.render", { component: ["AbovePrompt", "Pane"] }, async ($, e, next) => {
     if (e.component === "Pane" && e.requestId !== "sidebar-controls") return next(e);
     const original = await next(e);
-    if (e.surface !== "terminal" || e.props.hasSurvey) return original;
+    if (!supportedSurface(e.surface) || e.props.hasSurvey) return original;
     await load($, state);
-    if (e.component === "AbovePrompt") {
+    if (e.component === "AbovePrompt" && e.surface === "terminal") {
       const { value } = await $.state.get({ plugin: "sidebar-controls", key: "visible" });
       if (value) return original;
     }
@@ -199,8 +211,37 @@ function go($, state, page) {
 
 function arrived(state, page) { if (state.page !== page) state.unseen[page] = true; }
 
-function observeLayout($, state, e) {
+async function refreshSurfaces($, state, open) {
+  const surfaces = await $.session.surfaces();
+  const wasDesktop = state.desktop;
+  const wasHeadless = state.headless;
+  state.desktop = surfaces.includes("desktop");
+  state.headless = !surfaces.some(supportedSurface);
+  if (state.desktop || wasDesktop) {
+    state.layoutTimer?.cancel(); state.layoutTimer = null;
+    state.layout = null; state.dockColumns = 0; state.spacePaused = false;
+  }
+  if (state.headless) {
+    state.timer?.cancel(); state.timer = null;
+    state.auto = null;
+  } else if (state.enabled && !state.spacePaused) {
+    if (open && (!wasDesktop || wasHeadless)) await $.ui.open(pane);
+    schedule($, state, 1000);
+  }
+}
 
+function observeLayout($, state, e) {
+  // Desktop owns its pane layout and does not use terminal fullscreen widths.
+  // A simultaneous narrow terminal must not close Desktop's shared pane.
+  if (e.surface === "desktop") {
+    const activated = !state.desktop || state.headless || state.spacePaused;
+    state.desktop = true; state.headless = false; state.spacePaused = false;
+    state.layoutTimer?.cancel(); state.layoutTimer = null;
+    state.layout = null;
+    if (activated) schedule($, state, 1000);
+    return;
+  }
+  if (state.desktop) return;
   if (e.component === "Pane") {
     state.dockColumns = e.props.placement === "dock" ? (e.props.bodyColumns || 0) + 1 : 0;
   }
@@ -497,11 +538,11 @@ async function renderPane($, e, state) {
   const ui = $.ui.resolve(e);
   const { Box, Text } = ui;
   const cols = e.props.bodyColumns || pane.columns;
-  const { value: navigationRows } = await $.state.get({ plugin: "prompt-nav", key: "paneRows" });
+  const navigationRows = e.surface === "terminal" ? (await $.state.get({ plugin: "prompt-nav", key: "paneRows" })).value : 0;
   // Navigation wraps this pane. Include its row in the height budget so focus
   // can reveal our input without scrolling the navigation out of view.
   const rows = Math.max(1, (e.props.scroll?.bodyRows || pane.rows) - (!e.props.view?.agentId && navigationRows === 1 ? 1 : 0));
-  const rule = Text({ dimColor: true, children: "─".repeat(cols) });
+  const rule = e.surface === "desktop" ? Box({ height: 1 }) : Text({ dimColor: true, children: "─".repeat(cols) });
   const body = state.page === "settings" ? await renderSettings($, e, state)
     : state.page === "feedback" ? renderSavedFeedback($, e, state, cols)
     : state.page === "prompt" ? renderPrompt($, e, state)
@@ -512,9 +553,10 @@ async function renderPane($, e, state) {
   // The chat hugs the input like a transcript does; every other page reads from the top.
   const children = [renderStrip($, e, state), rule];
   if (state.prefs.mode === "chat" && state.page === "chat") children.push(Text({ dimColor: true, children: "○ Chat only · replies when you ask" }));
-  children.push(Box({ flexGrow: 1, flexDirection: "column", justifyContent: state.page === "chat" ? "flex-end" : "flex-start", children: [body] }));
+  children.push(Box({ flexGrow: 1, flexDirection: "column", justifyContent: e.surface === "terminal" && state.page === "chat" ? "flex-end" : "flex-start", children: [body] }));
   if (!settingsPages.includes(state.page)) children.push(renderFooter($, e, state, rule));
-  return Box({ flexDirection: "column", minHeight: rows, children });
+  return Box({ flexDirection: "column", minHeight: rows,
+    ...(e.surface === "desktop" ? { width: "100%", alignItems: "stretch", padding: "md", gap: "sm" } : {}), children });
 }
 
 function renderStrip($, e, state) {
@@ -523,20 +565,35 @@ function renderStrip($, e, state) {
   const labels = { information: `Max${state.flags.length ? ` ${state.flags.length}` : ""}`, chat: "Chat", log: "Log" };
   const children = [];
   for (const page of pages) {
-    if (children.length) children.push(Text({ dimColor: true, children: "│" }));
-    children.push(Button({ key: `buddy-page-${page}`, plain: true, dimColor: state.page !== page, label: `${labels[page]}${state.unseen[page] ? "●" : ""}`, onPress: () => go($, state, page) }));
+    if (children.length && e.surface === "terminal") children.push(Text({ dimColor: true, children: "│" }));
+    children.push(Button({ key: `buddy-page-${page}`,
+      ...(e.surface === "terminal" ? { plain: true } : { variant: state.page === page ? "primary" : "secondary" }),
+      dimColor: state.page !== page, label: `${labels[page]}${state.unseen[page] ? e.surface === "desktop" ? " · new" : "●" : ""}`, onPress: () => go($, state, page) }));
   }
-  children.push(Text({ dimColor: true, children: "│" }), Button({ key: "buddy-settings", plain: true, dimColor: !settingsPages.includes(state.page), label: "Settings", onPress: () => go($, state, "settings") }));
-  return Box({ flexDirection: "row", gap: 1, children });
+  if (e.surface === "terminal") children.push(Text({ dimColor: true, children: "│" }));
+  children.push(Button({ key: "buddy-settings",
+    ...(e.surface === "terminal" ? { plain: true } : { variant: settingsPages.includes(state.page) ? "primary" : "secondary" }),
+    dimColor: !settingsPages.includes(state.page), label: "Settings", onPress: () => go($, state, "settings") }));
+  return Box({ flexDirection: "row", flexWrap: "wrap", gap: 1, children });
 }
 
 function renderFooter($, e, state, rule) {
   const { Box, Text, Button, Input } = $.ui.resolve(e);
+  if (e.surface === "desktop") return Box({ key: "buddy-composer", flexDirection: "column", alignItems: "stretch", width: "100%", marginTop: "md", gap: "sm", children: [
+    Box({ flexDirection: "row", justifyContent: "space-between", alignItems: "center", children: [
+      Text({ size: "caption", weight: "medium", dimColor: true, children: "Message Max" }),
+      ...(state.page === "chat" && (state.history.length || state.chat) ? [Button({ key: "buddy-reset", dimColor: true, label: "Reset chat", onPress: () => resetChat($, state) })] : []),
+    ] }),
+    ...(state.chatError ? [Text({ color: "yellow", children: state.chatError })] : []),
+    Input({ key: "buddy-question", value: state.draft, placeholder: "Ask about this session…", rows: 3, submitLabel: "Send",
+      ...(e.props.isFocused ? { autoFocus: true } : {}),
+      onInput: value => { state.draft = value; $.ui.invalidate("ui.render"); }, onSubmit: value => { void ask($, state, value); } }),
+  ] });
   const children = [rule];
   if (state.chatError) children.push(Text({ color: "yellow", wrap: "truncate-end", children: state.chatError }));
   // The field keeps what the person typed until the hook draws a different `value`, so the draft is redrawn as it
   // is typed: a send then draws "" against the typed text and the field empties.
-  children.push(Input({ key: "buddy-question", value: state.draft, placeholder: "Ask about this session…", submitLabel: "send", autoFocus: true,
+  children.push(Input({ key: "buddy-question", value: state.draft, placeholder: "Ask about this session…", submitLabel: "send", ...(e.surface === "terminal" || e.props.isFocused ? { autoFocus: true } : {}),
     onInput: value => { state.draft = value; $.ui.invalidate("ui.render"); }, onSubmit: value => { void ask($, state, value); } }));
   if (state.page === "chat" && (state.history.length || state.chat)) children.push(Button({ key: "buddy-reset", plain: true, dimColor: true, label: "reset chat", onPress: () => resetChat($, state) }));
   return Box({ flexDirection: "column", children });
@@ -805,7 +862,7 @@ function renderFlags($, e, state, cols) {
       ...blocks(ui, flag.text),
       ...(oneLine(flag.evidence) === oneLine(flag.text) || flag.text.includes(oneLine(flag.evidence)) ? [] : [Box({ height: 1 }), Text({ dimColor: true, children: `"${clip(flag.evidence, (cols - 6) * 2)}"` })]),
     ] }),
-    Box({ flexDirection: "row", gap: 2, paddingLeft: 1, children: [
+    Box({ flexDirection: "row", flexWrap: "wrap", gap: 2, paddingLeft: 1, children: [
       Button({ key: `explain:${flag.key}`, label: "Explain", onPress: () => ask($, state, `Explain this observation and its consequence: ${flag.text}`) }),
       Button({ key: `dismiss:${flag.key}`, label: "Dismiss", onPress: () => dismissFlag($, state, flag) }),
       ...(flag.kind !== "insight" ? [] : [Button({ key: `known:${flag.key}`, label: "I know this", onPress: () => dismissFlag($, state, flag, true) })]),
@@ -838,8 +895,18 @@ function renderChat($, e, state, cols, rows) {
   if (state.chat) items.push({ question: state.chat.question, pending: true });
   for (const question of state.chatQueue) items.push({ question, queued: true });
   if (!items.length) return Box({ flexDirection: "column", children: [Text({ dimColor: true, children: "Ask about what Claude is doing. Replies stay out of the main conversation." })] });
+  if (e.surface === "desktop") return Box({ flexDirection: "column", gap: "lg", width: "100%", children: items.map(item => Box({ flexDirection: "column", gap: "md", children: [
+    Box({ flexDirection: "column", gap: "xs", borderStyle: "round", borderDimColor: true, padding: "sm", children: [
+      Text({ size: "caption", weight: "semibold", dimColor: true, children: item.queued ? "You · queued" : "You" }),
+      ...blocks(ui, item.question),
+    ] }),
+    ...(item.pending || item.answer ? [Box({ flexDirection: "column", gap: "xs", children: [
+      Text({ size: "caption", weight: "semibold", dimColor: true, children: "Max" }),
+      ...(item.pending ? [Text({ dimColor: true, children: "Thinking…" })] : blocks(ui, item.answer)),
+    ] })] : []),
+  ] })) });
   const height = item => rowsOf(item.question, width) + (item.answer ? rowsOf(item.answer, width) + 1 : item.pending ? 2 : 0) + 1;
-  const budget = Math.max(4, rows - 8);
+  const budget = e.surface === "desktop" ? Infinity : Math.max(4, rows - 8);
   const pages = [];
   let current = [], used = 0;
   for (let i = items.length - 1; i >= 0; i--) {
@@ -872,6 +939,13 @@ function renderLog($, e, state) {
   const ui = $.ui.resolve(e);
   const { Box, Text } = ui;
   if (!state.updates.length) return Box({ flexDirection: "column", children: [Box({ height: 1 }), Text({ dimColor: true, children: "No summaries yet." })] });
+  if (e.surface === "desktop") return Box({ flexDirection: "column", gap: "md", children: [
+    Text({ size: "caption", dimColor: true, children: "Latest activity · newest first" }),
+    ...[...state.updates].reverse().map(update => Box({ flexDirection: "column", gap: "xs", children: [
+      Text({ size: "caption", dimColor: true, children: clock(update.at) }),
+      ...blocks(ui, update.text),
+    ] })),
+  ] });
   const children = [Text({ dimColor: true, children: `Last ${state.updates.length} ${state.updates.length === 1 ? "summary" : "summaries"} · newest first` }), Box({ height: 1 })];
   for (const update of [...state.updates].reverse()) {
     children.push(gutter(ui, Text({ dimColor: true, children: clock(update.at) || "   —   " }), gutter(ui, Text({ color: "cyan", children: "◆" }), blocks(ui, update.text)), 10), Box({ height: 1 }));

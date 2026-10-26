@@ -84,7 +84,7 @@ export function register(on) {
   });
 
   on("ui.render", { component: "Pane", requestId: pane.id }, async ($, e, next) => {
-    if (e.surface !== "terminal") return next(e);
+    if (e.surface !== "terminal" && e.surface !== "desktop") return next(e);
     if (!state.settings) state.settings = normalize(await $.store.get("settings"));
     const { Box, Text, Button, Input } = $.ui.resolve(e);
     const settings = state.settings;

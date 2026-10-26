@@ -2,6 +2,8 @@
 
 Claude Code mods by AJclemendor.
 
+**Buddy and Handoff support the terminal and local Code sessions in Claude Desktop.** The other display mods currently target the terminal.
+
 | Plugin | What it does |
 | --- | --- |
 | [compact-tools](plugins/compact-tools) | Compact tool output, including MCP calls and Bash errors. |
