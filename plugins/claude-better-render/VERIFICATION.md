@@ -1,10 +1,10 @@
-# Verification — 0.1.0
+# Verification — 0.1.1
 
 Tested on macOS with Claude Code 2.1.312, Node 22 and Typst 0.15.1.
 
 - 197 Claude hook tests pass across all ten plugins in this repository, including
   15 Better Render tests and five plugin-h tests.
-- Nine worker tests pass with the real Typst and Mermaid renderers. These cover
+- Ten worker tests pass with the real Typst and Mermaid renderers. These cover
   malformed PNGs, same-size file replacement, narrow layouts, draft height limits,
   math/tables, diagram errors, raw Typst fences and document file isolation.
 - An isolated terminal replay passes using a local fixture API: Read-image output,

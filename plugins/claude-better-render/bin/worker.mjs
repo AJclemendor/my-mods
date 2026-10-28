@@ -10,7 +10,7 @@ import { terminalCell } from './mermaid/font-metrics.mjs';
 import { terminalColors } from './mermaid/terminal-colors.mjs';
 
 const root = path.dirname(path.dirname(fileURLToPath(import.meta.url)));
-const VERSION = '0.1.0';
+const VERSION = '0.1.1';
 const MAX_FILE = 24 * 1024 * 1024;
 const hash = value => crypto.createHash('sha256').update(value).digest('hex');
 const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, Number(v) || lo));
@@ -142,7 +142,7 @@ export async function work(req) {
   trimCache(cache);
   return result;
 }
-if(process.argv[1]&&path.resolve(process.argv[1])===fileURLToPath(import.meta.url)) {
+if(process.argv[1]&&fs.realpathSync(process.argv[1])===fs.realpathSync(fileURLToPath(import.meta.url))) {
   try {const req=JSON.parse(fs.readFileSync(0,'utf8'));process.stdout.write(JSON.stringify(await work(req)));}
   catch(error) {process.stdout.write(JSON.stringify({error:String(error.message||error).slice(0,400)}));process.exitCode=1;}
 }

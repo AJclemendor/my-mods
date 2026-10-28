@@ -201,7 +201,7 @@ export function register(on:any) {
   on('command.run',{command:['render','better-render']},async($:any,e:any)=>{
     await init(s,$);const args=e.args.trim(),[cmd='',...rest]=args.split(/\s+/),value=rest.join(' ');
     if(!cmd||cmd==='demo') {s.demo=cmd==='demo';await $.ui.open(PANE);return {};}
-    if(cmd==='doctor') {const l=look(s,);return {text:`Better Render 0.1.0 · ${s.prefs.enabled?'on':'off'} · ${s.prefs.mode}\n${s.env.reason}\n${s.probe?.typst||'Typst unavailable: themed text fallback'}\nFont: ${l.font} · size: ${s.prefs.size}%\nQueue: ${s.queue.size} · active: ${s.active}${s.lastError?`\nLast fallback: ${s.lastError}`:''}`};}
+    if(cmd==='doctor') {const l=look(s,);return {text:`Better Render 0.1.1 · ${s.prefs.enabled?'on':'off'} · ${s.prefs.mode}\n${s.env.reason}\n${s.probe?.typst||'Typst unavailable: themed text fallback'}\nFont: ${l.font} · size: ${s.prefs.size}%\nQueue: ${s.queue.size} · active: ${s.active}${s.lastError?`\nLast fallback: ${s.lastError}`:''}`};}
     if(cmd==='copy') {if(!s.last)return {text:'No reply has been rendered yet.'};await $.ui.copy({text:s.last,surface:'terminal'});return {text:'Reply source copied.'};}
     if((cmd==='on'||cmd==='off')&&!value) {await save(s,$,{enabled:cmd==='on'});return {text:`Better Render ${cmd}.`};}
     if(['images','mermaid','preview'].includes(cmd)&&['on','off'].includes(value)) {await save(s,$,{[cmd]:value==='on'});return {text:`${cmd}: ${value}`};}

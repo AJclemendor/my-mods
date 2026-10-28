@@ -3,6 +3,8 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
+import { spawnSync } from 'node:child_process';
+import { fileURLToPath } from 'node:url';
 import { PNG } from 'pngjs';
 import { work, pngHeader } from '../bin/worker.mjs';
 
@@ -52,4 +54,11 @@ test('tall draft thumbnails obey the available row budget',async()=>{
   const tall=new PNG({width:24,height:1200});tall.data.fill(255);
   const r=await work({...common,kind:'image',base64:PNG.sync.write(tall).toString('base64'),maxRows:3});
   assert.ok(r.pages.every(p=>p.rows<=3&&p.columns<=64));
+});
+
+test('worker entry point runs when launched through a symlinked directory',()=>{
+  const alias=path.join(scratch,'worker-alias');
+  fs.symlinkSync(path.dirname(fileURLToPath(new URL('../bin/worker.mjs',import.meta.url))),alias,'dir');
+  const r=spawnSync(process.execPath,[path.join(alias,'worker.mjs')],{input:JSON.stringify({...common,kind:'image',base64:image().toString('base64')}),encoding:'utf8'});
+  assert.equal(r.status,0,r.stderr);assert.ok(JSON.parse(r.stdout).pages.length);
 });

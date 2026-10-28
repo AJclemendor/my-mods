@@ -111,7 +111,7 @@ def command(text):send('\x1b');pump(.2);send(text);pump(.2);send('\r');return pu
 try:
  # Source-copy actions remain text even when the answer is rasterized.
  wait_for('Copy reply');pump(3);(ROOT/'rendered.txt').write_text(pump())
- command('/render doctor');wait_for('Better Render 0.1.0');(ROOT/'doctor.txt').write_text(pump())
+ command('/render doctor');wait_for('Better Render 0.1.1');(ROOT/'doctor.txt').write_text(pump())
  assert 'typst 0.15' in pump(),pump()
  assert 'Last fallback:' not in pump(),pump()
  command('/render mode text')
