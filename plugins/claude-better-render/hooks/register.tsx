@@ -5,7 +5,7 @@ import { renderBlocks } from './vendor/prismantis/render';
 import { drawDiagrams } from './vendor/prismantis/mermaid';
 
 const PANE={id:'better-render-settings',title:'Better Render',columns:58,rows:22};
-const HELP='Usage: /render [on|off|mode native|auto|text|typeset|theme NAME|font FAMILY|size 75–160|images on|off|mermaid on|off|preview on|off|tools inherit|cards|copy|doctor|demo]';
+const HELP='Usage: /render [on|off|mode native|text|theme NAME|images on|off|mermaid on|off|preview on|off|tools inherit|cards|copy|doctor|demo]';
 const DEMO='# Better Render\n\nReadable **Markdown**, source copying, and $E=mc^2$.\n\n| Feature | State |\n| --- | --- |\n| Images | Ready |\n| Diagrams | Ready |\n\n> [!NOTE]\n> One renderer, one theme.\n\n```mermaid\nflowchart LR\n  Prompt --> Parse\n  Parse --> Render\n  Render --> Read\n```\n\n```rust\nlet price = 42;\nprintln!("{price}");\n```';
 
   async function init(s:any,$:any) {
@@ -25,7 +25,7 @@ const DEMO='# Better Render\n\nReadable **Markdown**, source copying, and $E=mc^
       s.env={...capabilities(env),...env};
       s.session=await $.session.id();
       const terminal=env.TERM_PROGRAM==='ghostty'||env.TERM_PROGRAM==='cmux'?'ghostty':env.KITTY_WINDOW_ID?'kitty':env.TERM==='xterm-kitty'?'kitty':null;
-      s.probe={typst:null,cell:{},colors:{}};
+      s.probe={cell:{},colors:{}};
       if(terminal) try {
         const r=await $.process.run(['node',`${$.plugin.root}/bin/worker.mjs`],{stdin:JSON.stringify({kind:'probe',terminal}),timeoutMs:10000});
         s.probe=JSON.parse(r.stdout);
@@ -40,8 +40,7 @@ const DEMO='# Better Render\n\nReadable **Markdown**, source copying, and $E=mc^
     const bg=p.theme==='terminal'&&colors.background?colors.background:resolved.background||'#ffffff';
     const fg=p.theme==='terminal'&&colors.foreground?colors.foreground:resolved.theme.codeText||'#24292f';
     const style={...resolved,copyButtons:false,images:false,httpLinks:true,fileLinks:null,cwd:'',home:s.env?.HOME||'',mermaid:p.mermaid};
-    return {style,bg,fg,accent:resolved.theme.accent||'#0969da',font:p.font==='terminal'?(cell.family||'Menlo'):p.font,
-      weight:probe.weight||'regular',size:p.size,cellRatio:cell.cell_aspect||2,dark:theme.includes('dark')||theme==='catppuccin-mocha'};
+    return {style,bg,fg,accent:resolved.theme.accent||'#0969da',font:cell.family||'Menlo',size:100,cellRatio:cell.cell_aspect||2,dark:theme.includes('dark')||theme==='catppuccin-mocha'};
   }
   function remember(s:any,key:string,value:any) {
     s.cache.delete(key);s.cache.set(key,value);
@@ -114,17 +113,13 @@ const DEMO='# Better Render\n\nReadable **Markdown**, source copying, and $E=mc^
       const id=`${scope}:${i}`,isCode=b.kind==='code',isDiagram=isCode&&b.lang.toLowerCase()==='mermaid';
       const sourceKey=fingerprint(b.raw),showSource=s.expanded.get(id)===sourceKey;
       let result:any=null;
-      const graphical=s.env?.pictures&&s.prefs.mode!=='text'&&!showSource;
+      const graphical=s.env?.pictures&&!showSource;
       const image=b.kind==='paragraph'?/^!\[([^\]]*)\]\(([^\s]+)\)\s*$/.exec(b.raw):null;
       if(graphical&&image&&s.prefs.images&&image[2].startsWith('/')) {
         let stamp='';try {const stat=await $.fs.stat(image[2]);stamp=JSON.stringify([stat.size,stat.mtimeMs]);} catch {}
         result=request(s,$,id,{kind:'image',path:image[2],stamp,columns,...l,style:undefined});
       } else if(graphical&&isDiagram&&s.prefs.mermaid&&!b.isOpen) {
         result=request(s,$,id,{kind:'mermaid',source:b.lines.join('\n'),columns,...l,style:undefined});
-      } else if(graphical&&!isCode&&s.probe?.typst&&!image) {
-        result=request(s,$,id,{kind:'document',source:b.raw,columns,...l,style:undefined});
-      } else if(graphical&&isCode&&['math','latex','tex'].includes(b.lang)&&!b.isOpen&&s.probe?.typst) {
-        result=request(s,$,id,{kind:'document',source:`$$\n${b.lines.join('\n')}\n$$`,columns,...l,style:undefined});
       }
       const content=result?.pages?pages(s,ui,result,id,b.raw):textBlock(s,ui,l.style,b,columns);
       const actions:any[]=[];
@@ -204,7 +199,7 @@ export function register(on:any) {
 
   on('session.start',async($:any,e:any,next:any)=>{
     const original=await next(e);await init(s,$);
-    for(const name of ['render','better-render']) await $.command.register({name,description:'Better Render: themes, typeset replies, diagrams and image previews',argumentHint:'[on|off|mode|theme|font|size|images|mermaid|preview|tools|copy|doctor|demo]',immediate:true});
+    for(const name of ['render','better-render']) await $.command.register({name,description:'Better Render: diagrams, image previews and optional Markdown themes',argumentHint:'[on|off|mode|theme|images|mermaid|preview|tools|copy|doctor|demo]',immediate:true});
     if((await $.session.surfaces()).includes('terminal')) startPoll(s,$);
     return original;
   });
@@ -214,12 +209,11 @@ export function register(on:any) {
   on('command.run',{command:['render','better-render']},async($:any,e:any)=>{
     await init(s,$);const args=e.args.trim(),[cmd='',...rest]=args.split(/\s+/),value=rest.join(' ');
     if(!cmd||cmd==='demo') {s.demo=cmd==='demo';await $.ui.open(PANE);return {};}
-    if(cmd==='doctor') {const l=look(s,);return {text:`Better Render 0.1.2 · ${s.prefs.enabled?'on':'off'} · ${s.prefs.mode}\n${s.env.reason}\n${s.probe?.typst||'Typst unavailable: themed text fallback'}\nFont: ${l.font} · size: ${s.prefs.size}%\nQueue: ${s.queue.size} · active: ${s.active}${s.lastError?`\nLast fallback: ${s.lastError}`:''}`};}
+    if(cmd==='doctor') {const l=look(s,);return {text:`Better Render 0.1.3 · ${s.prefs.enabled?'on':'off'} · ${s.prefs.mode}\n${s.env.reason}\nNode: ${s.probe?.node||'not probed'}\nQueue: ${s.queue.size} · active: ${s.active}${s.lastError?`\nLast fallback: ${s.lastError}`:''}`};}
     if(cmd==='copy') {if(!s.last)return {text:'No reply has been rendered yet.'};await $.ui.copy({text:s.last,surface:'terminal'});return {text:'Reply source copied.'};}
     if((cmd==='on'||cmd==='off')&&!value) {await save(s,$,{enabled:cmd==='on'});return {text:`Better Render ${cmd}.`};}
     if(['images','mermaid','preview'].includes(cmd)&&['on','off'].includes(value)) {await save(s,$,{[cmd]:value==='on'});return {text:`${cmd}: ${value}`};}
-    if(cmd==='mode'&&['native','auto','text','typeset'].includes(value)||cmd==='tools'&&['inherit','cards'].includes(value)||cmd==='theme'&&['terminal',...PRESET_NAMES].includes(value)||cmd==='font'&&value.length>0&&value.length<=120) {await save(s,$,{[cmd]:value});return {text:`${cmd}: ${value}`};}
-    if(cmd==='size'&&/^\d+$/.test(value)&&Number(value)>=75&&Number(value)<=160) {await save(s,$,{size:Number(value)});return {text:`Text size: ${value}%`};}
+    if(cmd==='mode'&&['native','text'].includes(value)||cmd==='tools'&&['inherit','cards'].includes(value)||cmd==='theme'&&['terminal',...PRESET_NAMES].includes(value)) {await save(s,$,{[cmd]:value});return {text:`${cmd}: ${value}`};}
     return {text:HELP};
   });
   on('ui.render',{component:'AssistantMessage'},async($:any,e:any,next:any)=>{
@@ -276,17 +270,15 @@ export function register(on:any) {
   on('ui.render',{component:'Pane',requestId:PANE.id},async($:any,e:any,next:any)=>{
     if(e.surface!=='terminal')return next(e);await init(s,$);const ui=$.ui.resolve(e),p=s.prefs,children=[];
     const button=(key:string,label:string,patch:any)=>ui.Button({key,label,onPress:()=>save(s,$,patch)});
-    children.push(ui.Text({bold:true,children:'Claude Better Render · AJ'}),ui.Text({dimColor:true,children:`${look(s,).font} · ${p.size}% · ${p.theme}`}));
+    children.push(ui.Text({bold:true,children:'Claude Better Render · AJ'}),ui.Text({dimColor:true,children:`Theme: ${p.theme}`}));
     children.push(button('enabled',p.enabled?'Rendering: ON':'Rendering: OFF',{enabled:!p.enabled}));
-    children.push(ui.Box({flexDirection:'row',gap:1,children:['native','auto','text','typeset'].map(mode=>button(`mode:${mode}`,`${mode===p.mode?'● ':''}${mode}`,{mode}))}));
+    children.push(ui.Box({flexDirection:'row',gap:1,children:['native','text'].map(mode=>button(`mode:${mode}`,`${mode===p.mode?'● ':''}${mode}`,{mode}))}));
     for(const feature of ['images','mermaid','preview'])children.push(button(feature,`${feature}: ${p[feature]?'ON':'OFF'}`,{[feature]:!p[feature]}));
     children.push(ui.Select({key:'theme',value:p.theme,options:['terminal',...PRESET_NAMES].map(value=>({value,label:value})),onSelect:(value:string)=>save(s,$,{theme:value})}));
-    children.push(ui.Input({key:'font',value:p.font,placeholder:'Installed font family or terminal',submitLabel:'Set font',onSubmit:(font:string)=>font.trim()?save(s,$,{font:font.trim()}):undefined}));
-    children.push(ui.Box({flexDirection:'row',gap:2,children:[button('smaller','Smaller',{size:Math.max(75,p.size-10)}),button('larger','Larger',{size:Math.min(160,p.size+10)})]}));
     children.push(button('tools',`Tool style: ${p.tools}`,{tools:p.tools==='inherit'?'cards':'inherit'}));
     children.push(ui.Text({dimColor:true,children:'Inspired by Intelligent UI, Prismantis, Mermaid Inline, Inline Images and Claude Image View. See README for credits.'}));
     children.push(ui.Text({dimColor:true,children:'/render doctor explains image support and fallbacks.'}));
-    children.push(p.mode==='native'?ui.Text({children:'Native mode preserves Claude’s normal text. Images and diagram previews stay available. Font, size and themes apply only to the optional styled modes.'}):await drawReply(s,$,{...e,viewport:{...e.viewport,columns:e.props.bodyColumns||54}},s.demo?DEMO:'## Preview\n\n**Readable replies**, images, diagrams, and source copying.',PANE.id));
+    children.push(p.mode==='native'?ui.Text({children:'Native mode preserves Claude’s normal text. Images and diagram previews stay available. Optional text mode applies Markdown themes.'}):await drawReply(s,$,{...e,viewport:{...e.viewport,columns:e.props.bodyColumns||54}},s.demo?DEMO:'## Preview\n\n**Readable replies**, images, diagrams, and source copying.',PANE.id));
     return ui.Box({flexDirection:'column',gap:1,children});
   });
 }

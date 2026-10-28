@@ -1,8 +1,9 @@
 # Claude Better Render — terminal-only implementation plan
 
-Status: implemented as Better Render 0.1.2, 2026-10-28. This document records
+Status: implemented as Better Render 0.1.3, 2026-10-28. This document records
 the original terminal-only design. Following user feedback, native text is now
-the default and typesetting is opt-in; see the plugin README and VERIFICATION.md
+the default. Typesetting was fully removed in 0.1.3; this historical plan is
+not a description of current features. See the plugin README and VERIFICATION.md
 for delivered behavior and the completed checks.
 
 ## Product

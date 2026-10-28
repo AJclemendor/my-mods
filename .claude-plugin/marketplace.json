@@ -53,7 +53,7 @@
     {
       "name": "better-render",
       "source": "./plugins/claude-better-render",
-      "description": "AJ\u2019s combined terminal renderer: typeset replies, themed Markdown, Mermaid and inline images."
+      "description": "Native Claude text, optional Markdown themes, Mermaid and inline images."
     }
   ]
 }

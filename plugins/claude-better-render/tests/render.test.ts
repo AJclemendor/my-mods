@@ -6,7 +6,7 @@ const MSG={plugin:'better-render',surface:'terminal',component:'AssistantMessage
 const PANE={plugin:'better-render',surface:'terminal',component:'Pane',requestId:'better-render-settings',viewport:{columns:70,rows:40,isFullscreen:true},
   props:{title:'Better Render',isFocused:true,bodyColumns:60,placement:'dock',scroll:{offset:0,bodyRows:30},view:{}}} as const;
 function host(on:any,prefs:any={}, custom:any={}) {
-  mock.store(on,{preferences:custom.raw?prefs:{textModeVersion:1,mode:'auto',...prefs}});mock.env(on,{TERM_PROGRAM:custom.graphical?'ghostty':'Apple_Terminal',HOME:'/fixture'});
+  mock.store(on,{preferences:custom.raw?prefs:{textModeVersion:1,mode:'text',...prefs}});mock.env(on,{TERM_PROGRAM:custom.graphical?'ghostty':'Apple_Terminal',HOME:'/fixture'});
   const clock=mock.clock(on),copies:any[]=[],requests:any[]=[];
   if(!custom.session)on('session.id',()=>({value:'fixture-session'}));
   on('session.surfaces',()=>({value:['terminal']}));
@@ -35,7 +35,8 @@ describe('Better Render',()=>{
   });
   test('settings render native interactive controls',async($,on)=>{
     host(on);const ui=await $.ui.mount(PANE);
-    expect(await ui.find({key:'font'})).toBeDefined();
+    expect(await ui.find({key:'font'})).toBeUndefined();
+    expect(await ui.find({key:'mode:typeset'})).toBeUndefined();
     await ui.press({key:'mode:text'});
     expect((await $.command.run({command:'render',args:'doctor'})).text).toContain('text');
     await ui.unmount();
@@ -51,7 +52,7 @@ describe('Better Render',()=>{
   });
   test('invalid arguments do not change rendering settings',async($,on)=>{
     host(on);expect((await $.command.run({command:'render',args:'size 0'})).text).toContain('Usage:');
-    expect((await $.command.run({command:'render',args:'doctor'})).text).toContain('size: 100%');
+    expect((await $.command.run({command:'render',args:'doctor'})).text).toContain('text');
   });
   test('long replies fall back instead of dropping text or exceeding tree limits',async($,on)=>{
     host(on);expect(await $.ui.render({...MSG,props:{...MSG.props,text:'word '.repeat(20000)}})).toEqual({type:'engine',ref:0});
@@ -79,7 +80,7 @@ describe('Better Render',()=>{
     });
     on('fs.read',()=>({value:{base64:'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+aJ1sAAAAASUVORK5CYII='}}));
     on('ui.render',($,e)=>$.ui.resolve(e).Box({children:[{type:'engine',ref:0},$.ui.resolve(e).Text({children:'THINKING_KEPT'})]}));
-    const ui=await $.ui.mount({...MSG,props:{...MSG.props,text:'A single paragraph.'}});
+    const ui=await $.ui.mount({...MSG,props:{...MSG.props,text:'```mermaid\nflowchart LR\n A --> B\n```'}});
     await h.clock.advance(500);await ui.redraw();
     expect(await ui.find({type:'Image'})).toBeDefined();
     expect(await ui.find({type:'Text',text:'THINKING_KEPT'})).toBeDefined();
@@ -89,7 +90,7 @@ describe('Better Render',()=>{
   test('a failed render keeps the source and reports the reason',async($,on)=>{
     const h=host(on,{}, {graphical:true,process:true});
     on('process.run',(_,e)=>({value:{exitCode:0,stdout:JSON.stringify(JSON.parse(e.init?.stdin||'{}').kind==='probe'?{typst:'typst',cell:{},colors:{}}:{error:'fixture render failed'}),stderr:''}}));
-    const ui=await $.ui.mount({...MSG,props:{...MSG.props,text:'Source survives.'}});
+    const ui=await $.ui.mount({...MSG,props:{...MSG.props,text:'Source survives.\n\n```mermaid\nflowchart LR\n A --> B\n```'}});
     await h.clock.advance(500);await ui.redraw();
     expect(await ui.find({type:'Text',text:'Source survives.'})).toBeDefined();
     expect((await $.command.run({command:'render',args:'doctor'})).text).toContain('fixture render failed');
@@ -119,7 +120,7 @@ describe('Better Render',()=>{
       return {value:{exitCode:0,stdout:JSON.stringify({error:'old job'}),stderr:''}};
     });
     on('session.end',()=>({sessionId:'fixture-session'}));
-    const ui=await $.ui.mount({...MSG,props:{...MSG.props,text:'One paragraph.'}});
+    const ui=await $.ui.mount({...MSG,props:{...MSG.props,text:'```mermaid\nflowchart LR\n A --> B\n```'}});
     await h.clock.advance(200);
     expect(calls).toBe(1);
     await $.session.end({reason:'clear'});finish();
@@ -175,7 +176,7 @@ test('fresh and existing installations default to unmodified native text',async(
   await h.clock.advance(500);
   expect(jobs.filter(x=>x.kind!=='probe').length).toBe(0);
   expect((await $.command.run({command:'render',args:'doctor'})).text).toContain('native');
-  await $.command.run({command:'render',args:'mode auto'});
+  await $.command.run({command:'render',args:'mode text'});
   expect((await $.ui.render(MSG)).type).toBe('Box');
   await $.command.run({command:'render',args:'mode native'});
   expect(await $.ui.render(MSG)).toEqual({type:'engine',ref:0});
@@ -197,4 +198,14 @@ test('native mode appends a diagram while retaining the complete original reply'
   expect(jobs.filter(x=>x.kind==='document').length).toBe(0);
   expect(jobs.filter(x=>x.kind==='mermaid').length).toBe(1);
   await ui.unmount();
+});
+
+test('removed typesetting commands and old preferences cannot restore it',async($,on)=>{
+  host(on,{mode:'typeset',textModeVersion:1,font:'Example',size:150},{raw:true});
+  const p=preferences({mode:'typeset',textModeVersion:1,font:'Example',size:150});
+  expect(p.mode).toBe('native');expect(p.font).toBeUndefined();expect(p.size).toBeUndefined();
+  for(const args of ['mode typeset','mode auto','font Example','size 150']) {
+    expect((await $.command.run({command:'render',args})).text).toContain('Usage:');
+  }
+  expect(await $.ui.render(MSG)).toEqual({type:'engine',ref:0});
 });

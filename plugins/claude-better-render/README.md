@@ -1,16 +1,15 @@
 # Claude Better Render
 
 AJ's terminal-only Claude Code mod with normal Claude text by default, optional
-typeset replies and themed Markdown, Mermaid
-diagrams, inline tool images and pasted-image previews. One renderer coordinates
+themed Markdown, Mermaid diagrams, inline tool images and pasted-image previews. One renderer coordinates
 these features, so several plugins do not compete to redraw the same reply.
 
 ## Install
 
-Install Node.js 18+ and Typst 0.15+ for graphical rendering. On macOS:
+Install Node.js 20.9+ for image and diagram rendering. On macOS:
 
 ```sh
-brew install node typst
+brew install node
 ```
 
 Then in Claude Code:
@@ -34,14 +33,9 @@ start with `claude-`. It does not draw in Desktop, regular Chat, or IDE surfaces
 | --- | --- |
 | `/render on` / `/render off` | Enable or restore the previous/native rendering. |
 | `/render mode native` | Default: keep Claude’s original text rendering; append Mermaid previews and keep tool images. |
-| `/render mode auto` | Render supported blocks as graphics, with text during rendering and on errors. |
-| `/render mode text` | Themed text, code, tables and Unicode diagrams. Tool image previews still follow the images setting. |
-| `/render mode typeset` | Request graphical document blocks; unsupported terminals and failed blocks still fall back to text. |
+| `/render mode text` | Themed text, code and tables, plus graphical diagrams when supported and Unicode fallback otherwise. |
 | `/render theme terminal` | Follow terminal colors where they can be detected. |
 | `/render theme github-light` | Choose one of the bundled Prismantis palettes. |
-| `/render font terminal` | Follow the detected terminal font. |
-| `/render font Berkeley Mono` | Use an installed font for graphical text. |
-| `/render size 120` | Set typeset text size (75–160%). Native text still uses the terminal font size. |
 | `/render images on` / `off` | Show/hide pictures returned by tools or sent as attachments. |
 | `/render mermaid on` / `off` | Draw diagrams or keep their source. |
 | `/render preview on` / `off` | Enable/disable pasted-image thumbnails before sending. |
@@ -49,17 +43,14 @@ start with `claude-`. It does not draw in Desktop, regular Chat, or IDE surfaces
 | `/render copy` | Copy the exact original text of the last rendered reply. |
 | `/render doctor` | Show dependency status, image capability and the most recent rendering failure. |
 
-The optional styled modes add **Copy reply** and **Source view** controls.
-Native mode leaves ordinary replies untouched, including font, spacing and copying. Code, diagrams and
-tables also have source-copy controls. Settings persist per Claude profile.
-The source view is ordinary selectable text. Graphical paragraphs are images:
-native drag-selection across them is not a reliable way to copy text; use these
-controls. The saved transcript and the model's tool results remain unchanged.
+Normal Claude text is the default. `/render mode text` opts into Prismantis
+Markdown styling using ordinary terminal text, with source-copy controls.
+Mermaid previews remain graphical where supported. The saved transcript and
+model-visible results remain unchanged.
 
-Version 0.1.2 resets older installations to native mode. Select `auto`, `text`, or
-`typeset` explicitly if you want styled replies. Font and theme choices do not
-affect ordinary text in native mode. Mermaid previews appear after the unchanged
-reply; the original diagram source remains available in that reply.
+Typesetting, graphical paragraphs, font controls, and size controls were removed
+in 0.1.3. Old `auto` and `typeset` preferences migrate to native mode. Mermaid
+previews appear after the unchanged native reply, preserving its source.
 
 ## Terminal support
 
@@ -70,15 +61,15 @@ has explicitly been enabled through Claude's supported environment setting.
 default; explicitly enabled image passthrough depends on the terminal and host.
 SSH sessions cannot assume that a remote font configuration matches the viewer.
 
-Node runs the local rendering worker; Typst handles Markdown/math and image
-conversion. Mermaid's renderer and the Typst Markdown/math packages are shipped
-locally. No extra model requests are made. There is no custom auto-updater and no
-first-render package download. Use Claude's normal plugin update flow.
+Node runs the local rendering worker. Mermaid renders diagrams; sharp converts
+JPEG and WebP images to bounded PNG previews. No external document compiler is
+used. Dependencies are installed with the plugin, and rendering makes no extra
+model requests. Use Claude's normal plugin update flow.
 
 PNG, JPEG and WebP previews are supported. Images are content-keyed, fitted to the
 available width and transferred as bounded PNGs. Very large/invalid files keep
 their original tool row or file link. Markdown image URLs are not fetched by the
-renderer. Raw `typst` code fences are displayed as code, never evaluated.
+renderer. Code fences are never executed.
 
 ## Works with AJ's existing mods
 
@@ -95,7 +86,7 @@ the native drawing entirely takes precedence rather than being silently erased.
 
 This mod builds on and takes inspiration from excellent community projects:
 
-- **[Intelligent UI](https://github.com/razorback16/cc-intelligent-ui)** by razorback16 — typeset-answer architecture, image conversion, and local Typst packages.
+- **[Intelligent UI](https://github.com/razorback16/cc-intelligent-ui)** by razorback16 — inspiration for the original rendering integration; its typesetting code and bundled packages have since been removed.
 - **[Prismantis](https://github.com/NahumLitvin/prismantis)** by Nahum Litvin — adapted Markdown parser, themed text/table/code renderers, palettes and Unicode diagrams.
 - **[Mermaid Inline](https://github.com/dazebug/mermaid-inline)** by dazebug — adapted diagram rendering and terminal font/color measurement.
 - **[Inline Images](https://github.com/kbrianps/claude-inline-images)** by Brian Pravato — tool-image preview design and result formats.
@@ -115,6 +106,6 @@ npm run test:worker
 uv run --with pyte python tests/terminal_check.py
 ```
 
-The worker tests execute Typst and Mermaid locally, including malformed input,
+The worker tests execute Mermaid and image conversion locally, including malformed input,
 same-size image replacement and width limits. The terminal replay uses an
 isolated Claude configuration and a local fake API; it makes no paid API calls.

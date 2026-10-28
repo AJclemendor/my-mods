@@ -1,31 +1,18 @@
-# Verification — 0.1.2
+# Verification — 0.1.3
 
-Tested on macOS with Claude Code 2.1.312, Node 22 and Typst 0.15.1.
+Tested on macOS with Claude Code 2.1.312 and Node 22.
 
-- 199 Claude hook tests pass across all ten plugins in this repository, including
-  17 Better Render tests and five plugin-h tests.
-- Ten worker tests pass with the real Typst and Mermaid renderers. These cover
-  malformed PNGs, same-size file replacement, narrow layouts, draft height limits,
-  math/tables, diagram errors, raw Typst fences and document file isolation.
-- An isolated terminal replay passes using a local fixture API: Read-image output,
-  streaming Markdown/math/Mermaid/code, diagnostic status, text/auto switching and
-  the settings pane. The captured output contains actual kitty graphics commands.
-  It does not use a paid model or any real profile credentials.
-- JPEG and WebP fixtures convert successfully to bounded PNG previews.
-- Generated document and Mermaid PNGs were visually inspected. Direct application
-  screenshot inspection was unavailable; no claim is made that every terminal,
-  multiplexer, scroll history or font combination has been visually tested.
-- Strict local manifest/hook validation passes. Marketplace-directory icon advice
-  is separate from local validation; this is distributed through my-mods.
-
-Regression coverage includes exact-source copying, native on/off behavior,
-settings controls, incomplete fences, Desktop passthrough, long-reply fallback,
-live-thinking composition, render deduplication, failed jobs, tool-image ownership,
-clear during an in-flight job, draft deletion, per-session draft identity, and
-plugin-h visibility. The release uses a versioned disk cache.
+- 18 Better Render hook tests cover native text preservation, old-preference
+  migration, removal of typesetting/font/size commands, optional text styling,
+  exact-source copying, settings, incomplete fences, Desktop passthrough,
+  live-thinking composition, failed/stale jobs, tool-image ownership and drafts.
+- Nine real worker tests cover PNG validation, same-size file replacement,
+  narrow layouts, draft height limits, Mermaid graphics/text and invalid input,
+  symlinked startup, rejection of document jobs, and JPEG/WebP conversion.
+- The isolated terminal replay uses a local fixture API and tests Read images,
+  unchanged native text, optional Markdown styling, diagrams and settings.
+  Captured terminal output contains actual kitty graphics commands.
+- The worker has no Typst invocation or document renderer. The bundled templates
+  and Typst packages have been deleted. Image conversion uses sharp.
 
 Running sessions must reload plugins or restart to load newly installed files.
-
-The native-default regression tests verify that fresh and existing installations
-return the original reply tree unchanged, schedule no document rendering, and
-keep that original reply when adding a diagram. Styled modes require opt-in.

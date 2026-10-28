@@ -111,13 +111,13 @@ def command(text):send('\x1b');pump(.2);send(text);pump(.2);send('\r');return pu
 try:
  # Source-copy actions remain text even when the answer is rasterized.
  wait_for('REPLAY_COMPLETE');pump(3);
- command('/render mode auto');wait_for('Copy reply');pump(2);(ROOT/'rendered.txt').write_text(pump())
- command('/render doctor');wait_for('Better Render 0.1.2');(ROOT/'doctor.txt').write_text(pump())
- assert 'typst 0.15' in pump(),pump()
+ command('/render mode text');wait_for('Copy reply');pump(2);(ROOT/'rendered.txt').write_text(pump())
+ command('/render doctor');wait_for('Better Render 0.1.3');(ROOT/'doctor.txt').write_text(pump())
+ assert 'Node: v' in pump(),pump()
  assert 'Last fallback:' not in pump(),pump()
- command('/render mode text')
- wait_for('mode: text');(ROOT/'text-mode.txt').write_text(pump())
- command('/render mode auto');wait_for('mode: auto');pump(2)
+ command('/render mode native')
+ wait_for('mode: native');(ROOT/'text-mode.txt').write_text(pump())
+ command('/render mode text');wait_for('mode: text');pump(2)
  command('/render demo');wait_for('Tool style: inherit');pump(3)
  (ROOT/'settings.txt').write_text(pump())
  if not args.gui:assert rawlog.count(b'\x1b_G')>0, 'No terminal image protocol output'

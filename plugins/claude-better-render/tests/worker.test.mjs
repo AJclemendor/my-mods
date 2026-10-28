@@ -5,6 +5,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
+import sharp from 'sharp';
 import { PNG } from 'pngjs';
 import { work, pngHeader } from '../bin/worker.mjs';
 
@@ -29,10 +30,7 @@ test('a narrow image never exceeds available columns',async()=>{
   const r=await work({...common,kind:'image',base64:image().toString('base64'),columns:3});
   assert.ok(r.pages.every(p=>p.columns<=3&&p.rows>0));
 });
-test('Markdown, tables and LaTeX produce valid real images',async()=>{
-  const r=await work({...common,kind:'document',source:'# Render test\n\n**Bold** and $E=mc^2$.\n\n| A | B |\n| --- | --- |\n| 1 | 2 |'});
-  assert.ok(r.pages.length);for(const p of r.pages)assert.ok(pngHeader(fs.readFileSync(p.file)));
-});
+
 test('Mermaid renders to both a picture and text without network calls',async()=>{
   const req={...common,kind:'mermaid',source:'flowchart LR\n A[Input] --> B[Output]'};
   const graph=await work(req);assert.ok(pngHeader(fs.readFileSync(graph.pages[0].file)));
@@ -41,14 +39,8 @@ test('Mermaid renders to both a picture and text without network calls',async()=
 test('invalid Mermaid fails so the hook can keep the readable source',async()=>{
   await assert.rejects(work({...common,kind:'mermaid',source:'this is not mermaid'}));
 });
-test('raw Typst fences are displayed as code, not executed',async()=>{
-  const r=await work({...common,kind:'document',source:'```typst\n#panic("SHOULD_NOT_RUN")\n```'});
-  assert.ok(r.pages.length);
-});
-test('Markdown local image paths do not read outside the document root',async()=>{
-  const r=await work({...common,kind:'document',source:'![private](/etc/passwd)'});
-  assert.ok(r.pages.length);
-});
+
+
 
 test('tall draft thumbnails obey the available row budget',async()=>{
   const tall=new PNG({width:24,height:1200});tall.data.fill(255);
@@ -61,4 +53,15 @@ test('worker entry point runs when launched through a symlinked directory',()=>{
   fs.symlinkSync(path.dirname(fileURLToPath(new URL('../bin/worker.mjs',import.meta.url))),alias,'dir');
   const r=spawnSync(process.execPath,[path.join(alias,'worker.mjs')],{input:JSON.stringify({...common,kind:'image',base64:image().toString('base64')}),encoding:'utf8'});
   assert.equal(r.status,0,r.stderr);assert.ok(JSON.parse(r.stdout).pages.length);
+});
+
+test('document typesetting is unavailable',async()=>{
+  await assert.rejects(work({...common,kind:'document',source:'# Heading'}),/Unknown render kind/);
+});
+test('JPEG and WebP previews work without an external compiler',async()=>{
+  for(const format of ['jpeg','webp']) {
+    const bytes=await sharp(image()).toFormat(format).toBuffer();
+    const r=await work({...common,kind:'image',base64:bytes.toString('base64')});
+    assert.ok(pngHeader(fs.readFileSync(r.pages[0].file)));
+  }
 });

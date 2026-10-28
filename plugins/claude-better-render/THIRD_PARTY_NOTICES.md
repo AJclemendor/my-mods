@@ -6,7 +6,7 @@ Claude Better Render is assembled and maintained by AJclemendor. It is an indepe
 
 [razorback16/cc-intelligent-ui](https://github.com/razorback16/cc-intelligent-ui), version 0.3.4, commit `18f2e67b1765f2abffc05e8daa4a7039f669de38`. MIT licensed.
 
-Typesetting design; adapted image conversion template; cmarker and mitex package distribution.
+Historical inspiration for the original integration. The document renderer, image conversion template and Typst packages were removed in 0.1.3.
 
 ## Prismantis
 
@@ -34,6 +34,8 @@ Paste discovery and preview design; rewritten session-scoped polling and image c
 
 Original MIT notices are retained in `licenses/`. Prismantis dependency and palette notices are in `licenses/prismantis-third-party.md`. Its vendored Prism and beautiful-mermaid code retains its own license headers.
 
-The Typst packages `cmarker 0.1.6` (MIT) and `mitex 0.2.7` (Apache-2.0) retain their complete sources, license files and notices in `render/packages/preview/`. No CeTZ or other LGPL package is bundled. This package does not redistribute fonts installed on your computer.
+No Typst packages or fonts are distributed with this version.
 
 Node dependencies are pinned in package-lock.json. Their notices accompany the installed packages: beautiful-mermaid (MIT), @resvg/resvg-js (MPL-2.0), and pngjs (MIT); platform-specific resvg binaries retain their upstream licenses.
+
+Image conversion uses sharp 0.35.5 (Apache-2.0) and its unmodified prebuilt libvips distribution (LGPL-2.1-or-later plus bundled library notices). Upstream sources and build instructions: https://github.com/lovell/sharp and https://github.com/lovell/sharp-libvips. Licenses and dependency notices accompany their npm packages.

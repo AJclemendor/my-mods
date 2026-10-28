@@ -1,7 +1,7 @@
 {
   "name": "better-render",
-  "version": "0.1.2",
-  "description": "AJ\u2019s terminal renderer: typeset replies, themed Markdown, Mermaid diagrams, inline images and paste previews.",
+  "version": "0.1.3",
+  "description": "Native Claude text, Mermaid diagrams, inline images, paste previews and optional Markdown themes.",
   "author": {
     "name": "AJclemendor"
   },

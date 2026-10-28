@@ -1,13 +1,12 @@
 import { parse } from './vendor/prismantis/markdown';
 
-export const DEFAULTS = { enabled: true, mode: 'native', textModeVersion: 1, theme: 'terminal', font: 'terminal', size: 100,
+export const DEFAULTS = { enabled: true, mode: 'native', textModeVersion: 1, theme: 'terminal',
   images: true, mermaid: true, preview: true, tools: 'inherit' };
 export function preferences(value: any) {
   const v=value && typeof value==='object'?value:{};
-  return {...DEFAULTS,...v,enabled:v.enabled!==false,images:v.images!==false,mermaid:v.mermaid!==false,preview:v.preview!==false,
-    textModeVersion:1,mode:v.textModeVersion===1&&['native','auto','text','typeset'].includes(v.mode)?v.mode:'native',tools:v.tools==='cards'?'cards':'inherit',
-    size:Number.isFinite(v.size)?Math.max(75,Math.min(160,v.size)):100,
-    font:typeof v.font==='string'&&v.font.length<=120?v.font:'terminal',theme:typeof v.theme==='string'?v.theme:'terminal'};
+  return {...DEFAULTS,enabled:v.enabled!==false,images:v.images!==false,mermaid:v.mermaid!==false,preview:v.preview!==false,
+    textModeVersion:1,mode:v.textModeVersion===1&&['native','text'].includes(v.mode)?v.mode:'native',tools:v.tools==='cards'?'cards':'inherit',
+    theme:typeof v.theme==='string'?v.theme:'terminal'};
 }
 export const fingerprint = (text: string) => {
   let h=2166136261;for(let i=0;i<text.length;i++) h=Math.imul(h^text.charCodeAt(i),16777619);
