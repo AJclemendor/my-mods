@@ -49,6 +49,11 @@
       "name": "flags",
       "source": "./plugins/flags",
       "description": "A focused flags sidebar with saved Good/Bad feedback, dismissal, and copying."
+    },
+    {
+      "name": "better-render",
+      "source": "./plugins/claude-better-render",
+      "description": "AJ\u2019s combined terminal renderer: typeset replies, themed Markdown, Mermaid and inline images."
     }
   ]
 }

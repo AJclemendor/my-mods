@@ -1,4 +1,5 @@
 import { describe, expect, test } from "claude-code/testing";
+import { register } from "../hooks/plugin-h.mjs";
 
 const event = {
   surface: "terminal", component: "AbovePrompt", requestId: "band",
@@ -6,6 +7,16 @@ const event = {
 } as const;
 
 describe("plugin-h", () => {
+  test("shares visibility with collaborating renderers", async () => {
+    const hooks: Record<string, any> = {};
+    register((name: string, ...args: any[]) => { hooks[name] = args[args.length-1]; });
+    const fake = { store: { set: async () => {} }, ui: { invalidate: () => {} } };
+    await hooks["command.run"](fake, { args: "hide" });
+    expect(hooks["state.get"]().value.value).toBe(true);
+    await hooks["command.run"](fake, { args: "show" });
+    expect(hooks["state.get"]().value.value).toBe(false);
+  });
+
   test("hides the strip as a native site and toggles back to other mods", async ($, on) => {
     on("store.set", () => ({ value: undefined }));
     on("ui.render", { component: "AbovePrompt" }, ($, e) => $.ui.resolve(e).Text({ children: "Controls" }));

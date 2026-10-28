@@ -1,6 +1,8 @@
 export function register(on) {
   let hidden = false;
 
+  on("state.get", { plugin: "plugin-h", key: "hidden" }, () => ({ value: { value: hidden, version: 0 } }));
+
   on("session.start", async ($, e, next) => {
     const result = await next(e);
     hidden = (await $.store.get("hidden")) === true;

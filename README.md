@@ -15,6 +15,7 @@ Claude Code mods by AJclemendor.
 | [plugin-h](plugins/plugin-h) | Hide or restore the bottom plugin strip, including its collapsed hint. |
 | [prompt-nav](plugins/prompt-nav) | Prev chat / Next chat jump between your prompts; Next chat stays still at the bottom. |
 | [handoff](plugins/handoff) | `/handoff` runs a context-sharing subtask with saved model and effort, one new worktree, and a PR against main. |
+| [Claude Better Render](plugins/claude-better-render) | Typeset terminal replies, themes, Mermaid diagrams, inline images and pasted-image previews. |
 
 ## Hide the bottom plugin strip
 
