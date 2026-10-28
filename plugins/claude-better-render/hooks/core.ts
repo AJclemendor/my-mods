@@ -1,11 +1,11 @@
 import { parse } from './vendor/prismantis/markdown';
 
-export const DEFAULTS = { enabled: true, mode: 'auto', theme: 'terminal', font: 'terminal', size: 100,
+export const DEFAULTS = { enabled: true, mode: 'native', textModeVersion: 1, theme: 'terminal', font: 'terminal', size: 100,
   images: true, mermaid: true, preview: true, tools: 'inherit' };
 export function preferences(value: any) {
   const v=value && typeof value==='object'?value:{};
   return {...DEFAULTS,...v,enabled:v.enabled!==false,images:v.images!==false,mermaid:v.mermaid!==false,preview:v.preview!==false,
-    mode:['auto','text','typeset'].includes(v.mode)?v.mode:'auto',tools:v.tools==='cards'?'cards':'inherit',
+    textModeVersion:1,mode:v.textModeVersion===1&&['native','auto','text','typeset'].includes(v.mode)?v.mode:'native',tools:v.tools==='cards'?'cards':'inherit',
     size:Number.isFinite(v.size)?Math.max(75,Math.min(160,v.size)):100,
     font:typeof v.font==='string'&&v.font.length<=120?v.font:'terminal',theme:typeof v.theme==='string'?v.theme:'terminal'};
 }

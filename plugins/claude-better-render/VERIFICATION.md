@@ -1,9 +1,9 @@
-# Verification — 0.1.1
+# Verification — 0.1.2
 
 Tested on macOS with Claude Code 2.1.312, Node 22 and Typst 0.15.1.
 
-- 197 Claude hook tests pass across all ten plugins in this repository, including
-  15 Better Render tests and five plugin-h tests.
+- 199 Claude hook tests pass across all ten plugins in this repository, including
+  17 Better Render tests and five plugin-h tests.
 - Ten worker tests pass with the real Typst and Mermaid renderers. These cover
   malformed PNGs, same-size file replacement, narrow layouts, draft height limits,
   math/tables, diagram errors, raw Typst fences and document file isolation.
@@ -25,3 +25,7 @@ clear during an in-flight job, draft deletion, per-session draft identity, and
 plugin-h visibility. The release uses a versioned disk cache.
 
 Running sessions must reload plugins or restart to load newly installed files.
+
+The native-default regression tests verify that fresh and existing installations
+return the original reply tree unchanged, schedule no document rendering, and
+keep that original reply when adding a diagram. Styled modes require opt-in.

@@ -1,6 +1,7 @@
 # Claude Better Render
 
-AJ's terminal-only Claude Code mod for typeset replies, themed Markdown, Mermaid
+AJ's terminal-only Claude Code mod with normal Claude text by default, optional
+typeset replies and themed Markdown, Mermaid
 diagrams, inline tool images and pasted-image previews. One renderer coordinates
 these features, so several plugins do not compete to redraw the same reply.
 
@@ -32,6 +33,7 @@ start with `claude-`. It does not draw in Desktop, regular Chat, or IDE surfaces
 | Command | Behavior |
 | --- | --- |
 | `/render on` / `/render off` | Enable or restore the previous/native rendering. |
+| `/render mode native` | Default: keep Claude’s original text rendering; append Mermaid previews and keep tool images. |
 | `/render mode auto` | Render supported blocks as graphics, with text during rendering and on errors. |
 | `/render mode text` | Themed text, code, tables and Unicode diagrams. Tool image previews still follow the images setting. |
 | `/render mode typeset` | Request graphical document blocks; unsupported terminals and failed blocks still fall back to text. |
@@ -47,11 +49,17 @@ start with `claude-`. It does not draw in Desktop, regular Chat, or IDE surfaces
 | `/render copy` | Copy the exact original text of the last rendered reply. |
 | `/render doctor` | Show dependency status, image capability and the most recent rendering failure. |
 
-Every reply has **Copy reply** and **Source view** controls. Code, diagrams and
+The optional styled modes add **Copy reply** and **Source view** controls.
+Native mode leaves ordinary replies untouched, including font, spacing and copying. Code, diagrams and
 tables also have source-copy controls. Settings persist per Claude profile.
 The source view is ordinary selectable text. Graphical paragraphs are images:
 native drag-selection across them is not a reliable way to copy text; use these
 controls. The saved transcript and the model's tool results remain unchanged.
+
+Version 0.1.2 resets older installations to native mode. Select `auto`, `text`, or
+`typeset` explicitly if you want styled replies. Font and theme choices do not
+affect ordinary text in native mode. Mermaid previews appear after the unchanged
+reply; the original diagram source remains available in that reply.
 
 ## Terminal support
 

@@ -5,7 +5,7 @@ import { renderBlocks } from './vendor/prismantis/render';
 import { drawDiagrams } from './vendor/prismantis/mermaid';
 
 const PANE={id:'better-render-settings',title:'Better Render',columns:58,rows:22};
-const HELP='Usage: /render [on|off|mode auto|text|typeset|theme NAME|font FAMILY|size 75–160|images on|off|mermaid on|off|preview on|off|tools inherit|cards|copy|doctor|demo]';
+const HELP='Usage: /render [on|off|mode native|auto|text|typeset|theme NAME|font FAMILY|size 75–160|images on|off|mermaid on|off|preview on|off|tools inherit|cards|copy|doctor|demo]';
 const DEMO='# Better Render\n\nReadable **Markdown**, source copying, and $E=mc^2$.\n\n| Feature | State |\n| --- | --- |\n| Images | Ready |\n| Diagrams | Ready |\n\n> [!NOTE]\n> One renderer, one theme.\n\n```mermaid\nflowchart LR\n  Prompt --> Parse\n  Parse --> Render\n  Render --> Read\n```\n\n```rust\nlet price = 42;\nprintln!("{price}");\n```';
 
   async function init(s:any,$:any) {
@@ -137,6 +137,19 @@ const DEMO='# Better Render\n\nReadable **Markdown**, source copying, and $E=mc^
     rows.push(toolbar());
     return ui.Box({flexDirection:'column',gap:1,children:rows});
   }
+  async function nativeAdditions(s:any,$:any,e:any,original:any) {
+    // The native reply remains opaque and untouched, including other mods' additions.
+    if(!s.env?.pictures||e.props.text.length>90000)return original;
+    const ui=$.ui.resolve(e),l=look(s,),columns=Math.max(1,Math.min(120,(e.viewport?.columns||80)-4)),extra=[];
+    for(const [i,b] of blocksOf(e.props.text).entries()) {
+      if(i>=120)break;
+      if(b.kind!=='code'||b.lang.toLowerCase()!=='mermaid'||b.isOpen||!s.prefs.mermaid)continue;
+      const id=`${e.requestId}:native-diagram:${i}`;
+      const result=request(s,$,id,{kind:'mermaid',source:b.lines.join('\n'),columns,...l,style:undefined});
+      if(result?.pages)extra.push(...pages(s,ui,result,id,b.raw));
+    }
+    return extra.length?ui.Box({flexDirection:'column',children:[original,...extra]}):original;
+  }
   async function media(s:any,$:any,e:any,output:any,input:any,scope:string) {
     if(!s.prefs.images||!s.env?.pictures) return [];
     const ui=$.ui.resolve(e),l=look(s,),columns=Math.max(1,Math.min(60,(e.viewport?.columns||80)-4));
@@ -201,11 +214,11 @@ export function register(on:any) {
   on('command.run',{command:['render','better-render']},async($:any,e:any)=>{
     await init(s,$);const args=e.args.trim(),[cmd='',...rest]=args.split(/\s+/),value=rest.join(' ');
     if(!cmd||cmd==='demo') {s.demo=cmd==='demo';await $.ui.open(PANE);return {};}
-    if(cmd==='doctor') {const l=look(s,);return {text:`Better Render 0.1.1 · ${s.prefs.enabled?'on':'off'} · ${s.prefs.mode}\n${s.env.reason}\n${s.probe?.typst||'Typst unavailable: themed text fallback'}\nFont: ${l.font} · size: ${s.prefs.size}%\nQueue: ${s.queue.size} · active: ${s.active}${s.lastError?`\nLast fallback: ${s.lastError}`:''}`};}
+    if(cmd==='doctor') {const l=look(s,);return {text:`Better Render 0.1.2 · ${s.prefs.enabled?'on':'off'} · ${s.prefs.mode}\n${s.env.reason}\n${s.probe?.typst||'Typst unavailable: themed text fallback'}\nFont: ${l.font} · size: ${s.prefs.size}%\nQueue: ${s.queue.size} · active: ${s.active}${s.lastError?`\nLast fallback: ${s.lastError}`:''}`};}
     if(cmd==='copy') {if(!s.last)return {text:'No reply has been rendered yet.'};await $.ui.copy({text:s.last,surface:'terminal'});return {text:'Reply source copied.'};}
     if((cmd==='on'||cmd==='off')&&!value) {await save(s,$,{enabled:cmd==='on'});return {text:`Better Render ${cmd}.`};}
     if(['images','mermaid','preview'].includes(cmd)&&['on','off'].includes(value)) {await save(s,$,{[cmd]:value==='on'});return {text:`${cmd}: ${value}`};}
-    if(cmd==='mode'&&['auto','text','typeset'].includes(value)||cmd==='tools'&&['inherit','cards'].includes(value)||cmd==='theme'&&['terminal',...PRESET_NAMES].includes(value)||cmd==='font'&&value.length>0&&value.length<=120) {await save(s,$,{[cmd]:value});return {text:`${cmd}: ${value}`};}
+    if(cmd==='mode'&&['native','auto','text','typeset'].includes(value)||cmd==='tools'&&['inherit','cards'].includes(value)||cmd==='theme'&&['terminal',...PRESET_NAMES].includes(value)||cmd==='font'&&value.length>0&&value.length<=120) {await save(s,$,{[cmd]:value});return {text:`${cmd}: ${value}`};}
     if(cmd==='size'&&/^\d+$/.test(value)&&Number(value)>=75&&Number(value)<=160) {await save(s,$,{size:Number(value)});return {text:`Text size: ${value}%`};}
     return {text:HELP};
   });
@@ -214,6 +227,7 @@ export function register(on:any) {
     await init(s,$);if(!s.prefs.enabled)return original;
     if(s.stopped) startPoll(s,$);
     s.last=e.props.text;
+    if(s.prefs.mode==='native')return nativeAdditions(s,$,e,original);
     const body=await drawReply(s,$,e,e.props.text,e.requestId);if(!body)return original;
     // Keep outer additions such as live-thinking; replace only native content.
     const replaced=replaceNative(original,body);return replaced.replaced?replaced.node:original;
@@ -264,7 +278,7 @@ export function register(on:any) {
     const button=(key:string,label:string,patch:any)=>ui.Button({key,label,onPress:()=>save(s,$,patch)});
     children.push(ui.Text({bold:true,children:'Claude Better Render · AJ'}),ui.Text({dimColor:true,children:`${look(s,).font} · ${p.size}% · ${p.theme}`}));
     children.push(button('enabled',p.enabled?'Rendering: ON':'Rendering: OFF',{enabled:!p.enabled}));
-    children.push(ui.Box({flexDirection:'row',gap:1,children:['auto','text','typeset'].map(mode=>button(`mode:${mode}`,`${mode===p.mode?'● ':''}${mode}`,{mode}))}));
+    children.push(ui.Box({flexDirection:'row',gap:1,children:['native','auto','text','typeset'].map(mode=>button(`mode:${mode}`,`${mode===p.mode?'● ':''}${mode}`,{mode}))}));
     for(const feature of ['images','mermaid','preview'])children.push(button(feature,`${feature}: ${p[feature]?'ON':'OFF'}`,{[feature]:!p[feature]}));
     children.push(ui.Select({key:'theme',value:p.theme,options:['terminal',...PRESET_NAMES].map(value=>({value,label:value})),onSelect:(value:string)=>save(s,$,{theme:value})}));
     children.push(ui.Input({key:'font',value:p.font,placeholder:'Installed font family or terminal',submitLabel:'Set font',onSubmit:(font:string)=>font.trim()?save(s,$,{font:font.trim()}):undefined}));
@@ -272,7 +286,7 @@ export function register(on:any) {
     children.push(button('tools',`Tool style: ${p.tools}`,{tools:p.tools==='inherit'?'cards':'inherit'}));
     children.push(ui.Text({dimColor:true,children:'Inspired by Intelligent UI, Prismantis, Mermaid Inline, Inline Images and Claude Image View. See README for credits.'}));
     children.push(ui.Text({dimColor:true,children:'/render doctor explains image support and fallbacks.'}));
-    children.push(await drawReply(s,$,{...e,viewport:{...e.viewport,columns:e.props.bodyColumns||54}},s.demo?DEMO:'## Preview\n\n**Readable replies**, images, diagrams, and source copying.',PANE.id));
+    children.push(p.mode==='native'?ui.Text({children:'Native mode preserves Claude’s normal text. Images and diagram previews stay available. Font, size and themes apply only to the optional styled modes.'}):await drawReply(s,$,{...e,viewport:{...e.viewport,columns:e.props.bodyColumns||54}},s.demo?DEMO:'## Preview\n\n**Readable replies**, images, diagrams, and source copying.',PANE.id));
     return ui.Box({flexDirection:'column',gap:1,children});
   });
 }

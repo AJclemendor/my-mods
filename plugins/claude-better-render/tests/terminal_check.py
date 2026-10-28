@@ -110,8 +110,9 @@ def wait_for(needle,timeout=30):
 def command(text):send('\x1b');pump(.2);send(text);pump(.2);send('\r');return pump(1)
 try:
  # Source-copy actions remain text even when the answer is rasterized.
- wait_for('Copy reply');pump(3);(ROOT/'rendered.txt').write_text(pump())
- command('/render doctor');wait_for('Better Render 0.1.1');(ROOT/'doctor.txt').write_text(pump())
+ wait_for('REPLAY_COMPLETE');pump(3);
+ command('/render mode auto');wait_for('Copy reply');pump(2);(ROOT/'rendered.txt').write_text(pump())
+ command('/render doctor');wait_for('Better Render 0.1.2');(ROOT/'doctor.txt').write_text(pump())
  assert 'typst 0.15' in pump(),pump()
  assert 'Last fallback:' not in pump(),pump()
  command('/render mode text')

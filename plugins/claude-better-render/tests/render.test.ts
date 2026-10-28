@@ -1,12 +1,12 @@
 import { describe, expect, test, mock } from 'claude-code/testing';
-import { imageHeader, capabilities, replaceNative, previewNumbers } from '../hooks/core';
+import { imageHeader, capabilities, replaceNative, previewNumbers, preferences } from '../hooks/core';
 
 const MSG={plugin:'better-render',surface:'terminal',component:'AssistantMessage',requestId:'reply-1',viewport:{columns:90,rows:40,isFullscreen:true},
   props:{text:'# Heading\n\nHello **world**.\n\n```rust\nlet answer = 42;\n```',isFirstOfReply:true,isSummary:false}} as const;
 const PANE={plugin:'better-render',surface:'terminal',component:'Pane',requestId:'better-render-settings',viewport:{columns:70,rows:40,isFullscreen:true},
   props:{title:'Better Render',isFocused:true,bodyColumns:60,placement:'dock',scroll:{offset:0,bodyRows:30},view:{}}} as const;
 function host(on:any,prefs:any={}, custom:any={}) {
-  mock.store(on,{preferences:prefs});mock.env(on,{TERM_PROGRAM:custom.graphical?'ghostty':'Apple_Terminal',HOME:'/fixture'});
+  mock.store(on,{preferences:custom.raw?prefs:{textModeVersion:1,mode:'auto',...prefs}});mock.env(on,{TERM_PROGRAM:custom.graphical?'ghostty':'Apple_Terminal',HOME:'/fixture'});
   const clock=mock.clock(on),copies:any[]=[],requests:any[]=[];
   if(!custom.session)on('session.id',()=>({value:'fixture-session'}));
   on('session.surfaces',()=>({value:['terminal']}));
@@ -158,5 +158,43 @@ test('draft previews fit the band, hide with plugin-h, and reset across sessions
   await $.session.end({reason:'clear'});session='session-b';text='[Image #1]';
   await ui.redraw();await h.clock.advance(700);await ui.redraw();await h.clock.advance(300);await ui.redraw();
   expect(await ui.find({type:'Image'})).toBeDefined();expect(jobs[jobs.length-1].path).toContain('/session-b/images/1.png');
+  await ui.unmount();
+});
+
+
+test('fresh and existing installations default to unmodified native text',async($,on)=>{
+  const h=host(on,{mode:'auto',font:'Berkeley Mono',size:120},{raw:true,graphical:true,process:true});
+  const jobs:any[]=[];
+  on('process.run',(_,e)=>{
+    jobs.push(JSON.parse(e.init?.stdin||'{}'));
+    return {value:{exitCode:0,stdout:JSON.stringify({typst:'typst',cell:{},colors:{}}),stderr:''}};
+  });
+  expect(preferences(undefined).mode).toBe('native');
+  expect(preferences({mode:'auto'}).mode).toBe('native');
+  expect(await $.ui.render(MSG)).toEqual({type:'engine',ref:0});
+  await h.clock.advance(500);
+  expect(jobs.filter(x=>x.kind!=='probe').length).toBe(0);
+  expect((await $.command.run({command:'render',args:'doctor'})).text).toContain('native');
+  await $.command.run({command:'render',args:'mode auto'});
+  expect((await $.ui.render(MSG)).type).toBe('Box');
+  await $.command.run({command:'render',args:'mode native'});
+  expect(await $.ui.render(MSG)).toEqual({type:'engine',ref:0});
+});
+
+test('native mode appends a diagram while retaining the complete original reply',async($,on)=>{
+  const h=host(on,{mode:'native'},{graphical:true,process:true,render:true});
+  const jobs:any[]=[];
+  on('ui.render',($,e)=>$.ui.resolve(e).Text({children:'ORIGINAL_REPLY_UNCHANGED'}));
+  on('process.run',(_,e)=>{
+    const r=JSON.parse(e.init?.stdin||'{}');jobs.push(r);
+    return {value:{exitCode:0,stdout:JSON.stringify(r.kind==='probe'?{typst:'typst',cell:{},colors:{}}:{pages:[{file:'/fixture/diagram.png',columns:20,rows:4}]}),stderr:''}};
+  });
+  on('fs.read',()=>({value:{base64:'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+aJ1sAAAAASUVORK5CYII='}}));
+  const ui=await $.ui.mount({...MSG,props:{...MSG.props,text:'Normal text.\n\n```mermaid\nflowchart LR\n A --> B\n```'}});
+  await h.clock.advance(500);await ui.redraw();
+  expect(await ui.find({type:'Text',text:'ORIGINAL_REPLY_UNCHANGED'})).toBeDefined();
+  expect(await ui.find({type:'Image'})).toBeDefined();
+  expect(jobs.filter(x=>x.kind==='document').length).toBe(0);
+  expect(jobs.filter(x=>x.kind==='mermaid').length).toBe(1);
   await ui.unmount();
 });
