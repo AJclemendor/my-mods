@@ -29,6 +29,10 @@ start with `claude-`. It does not draw in Desktop, regular Chat, or IDE surfaces
 `/render` opens settings and a live preview. `/render demo` opens a larger example.
 `/better-render` is an alias for `/render`.
 
+The **Mod controls** sidebar includes **Better Render: ON/OFF**. Click it to
+toggle the whole mod; it shares the saved state used by `/render on` and
+`/render off`. Use `/sidebar-controls on` if the sidebar is closed.
+
 | Command | Behavior |
 | --- | --- |
 | `/render on` / `/render off` | Enable or restore the previous/native rendering. |

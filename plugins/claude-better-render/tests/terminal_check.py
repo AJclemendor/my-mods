@@ -61,7 +61,7 @@ env=os.environ.copy()
 for k in ['ANTHROPIC_API_KEY','ANTHROPIC_AUTH_TOKEN','CLAUDE_CODE_OAUTH_TOKEN','CLAUDECODE','ANTHROPIC_BASE_URL','CLAUDE_CODE_USE_BEDROCK','CLAUDE_CODE_USE_VERTEX','CLAUDE_CODE_USE_FOUNDRY','NO_COLOR','CLAUDE_CODE_DISABLE_TERMINAL_IMAGES','CLAUDE_AX_SCREEN_READER','CLAUDE_CODE_ACCESSIBILITY']:env.pop(k,None)
 env.update(CLAUDE_CONFIG_DIR=str(CONFIG),ANTHROPIC_AUTH_TOKEN='offline-fixture',ANTHROPIC_BASE_URL=f'http://127.0.0.1:{server.server_port}',CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC='1',DISABLE_AUTOUPDATER='1',CLAUDE_CODE_ENABLE_FUNCTION_HOOKS='1',CLAUDE_CODE_NO_FLICKER='1',CLAUDE_CODE_FORCE_TERMINAL_IMAGES='1',TERM='xterm-kitty',TERM_PROGRAM='kitty',KITTY_WINDOW_ID='1')
 cli=[shutil.which('claude'),'--plugin-dir',str(PLUGIN)]
-for p in ['compact-tools','live-thinking']:cli+=['--plugin-dir',str(PLUGIN.parent/p)]
+for p in ['compact-tools','live-thinking','sidebar-controls']:cli+=['--plugin-dir',str(PLUGIN.parent/p)]
 cli+=['--model','claude-sonnet-4-6','--dangerously-skip-permissions','--verbose','--strict-mcp-config','--mcp-config','{"mcpServers":{}}','--debug-file',str(ROOT/'debug.log'),'Read the sample image and show the fixture reply.']
 kitty='/Applications/kitty.app/Contents/MacOS/kitty';kitten='/Applications/kitty.app/Contents/MacOS/kitten';socket=str(ROOT/'kitty.sock')
 if args.gui:
@@ -112,7 +112,7 @@ try:
  # Source-copy actions remain text even when the answer is rasterized.
  wait_for('REPLAY_COMPLETE');pump(3);
  command('/render mode text');wait_for('Copy reply');pump(2);(ROOT/'rendered.txt').write_text(pump())
- command('/render doctor');wait_for('Better Render 0.1.3');(ROOT/'doctor.txt').write_text(pump())
+ command('/render doctor');wait_for('Better Render 0.1.4');(ROOT/'doctor.txt').write_text(pump())
  assert 'Node: v' in pump(),pump()
  assert 'Last fallback:' not in pump(),pump()
  command('/render mode native')

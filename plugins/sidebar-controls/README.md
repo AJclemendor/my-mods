@@ -10,7 +10,7 @@ Move the Compact tools and Live thinking ON/OFF buttons into a sidebar at the to
 
 Installing this plugin also installs compatible versions of compact-tools and live-thinking. Update older copies if Claude reports a dependency version mismatch.
 
-The sidebar requests 30 columns and opens without taking keyboard focus. If installed, prompt-nav adds its Prev chat / Next chat navigation row. Click either toggle to change its mod. The existing `/compact-tools` and `/live-thinking` commands still work.
+The sidebar requests 30 columns and opens without taking keyboard focus. If installed, Better Render adds its ON/OFF toggle and prompt-nav adds its Prev chat / Next chat navigation row. Click a toggle to change its mod. The existing `/compact-tools` and `/live-thinking` commands still work.
 
 - `/sidebar-controls on`: open the sidebar.
 - `/sidebar-controls off`: close it and return the buttons above the prompt.

@@ -21,7 +21,7 @@ describe("sidebar-controls", () => {
     on("ui.panes", () => ({ value: [] }));
     on("ui.open", ($, e) => { opened = e; return { value: { isPlaced: true } }; });
     await $.command.run({ command: "sidebar-controls", args: "on" });
-    expect(opened).toEqual({ id: "sidebar-controls", title: "Mod controls", columns: 30, rows: 3 });
+    expect(opened).toEqual({ id: "sidebar-controls", title: "Mod controls", columns: 30, rows: 4 });
   });
 
   test("toggle closes the controls pane without closing another pane", async ($, on) => {

@@ -6,7 +6,7 @@ const MSG={plugin:'better-render',surface:'terminal',component:'AssistantMessage
 const PANE={plugin:'better-render',surface:'terminal',component:'Pane',requestId:'better-render-settings',viewport:{columns:70,rows:40,isFullscreen:true},
   props:{title:'Better Render',isFocused:true,bodyColumns:60,placement:'dock',scroll:{offset:0,bodyRows:30},view:{}}} as const;
 function host(on:any,prefs:any={}, custom:any={}) {
-  mock.store(on,{preferences:custom.raw?prefs:{textModeVersion:1,mode:'text',...prefs}});mock.env(on,{TERM_PROGRAM:custom.graphical?'ghostty':'Apple_Terminal',HOME:'/fixture'});
+  if(!custom.store)mock.store(on,{preferences:custom.raw?prefs:{textModeVersion:1,mode:'text',...prefs}});mock.env(on,{TERM_PROGRAM:custom.graphical?'ghostty':'Apple_Terminal',HOME:'/fixture'});
   const clock=mock.clock(on),copies:any[]=[],requests:any[]=[];
   if(!custom.session)on('session.id',()=>({value:'fixture-session'}));
   on('session.surfaces',()=>({value:['terminal']}));
@@ -208,4 +208,33 @@ test('removed typesetting commands and old preferences cannot restore it',async(
     expect((await $.command.run({command:'render',args})).text).toContain('Usage:');
   }
   expect(await $.ui.render(MSG)).toEqual({type:'engine',ref:0});
+});
+
+
+test('sidebar toggle persists enabled state and stays in sync with commands',async($,on)=>{
+  host(on,{}, {render:true,store:true});
+  let saved:any={enabled:true,textModeVersion:1,mode:'text'};
+  on('store.get',()=>({value:saved}));
+  on('store.set',(_,e)=>{saved=e.value;return {value:undefined};});
+  on('ui.render',($,e)=>e.component==='Pane'?$.ui.resolve(e).Text({children:'EXISTING_CONTROLS'}):{type:'engine',ref:0});
+  const event={...PANE,requestId:'sidebar-controls',props:{...PANE.props,title:'Mod controls',bodyColumns:30}};
+  const ui=await $.ui.mount(event);
+  expect(await ui.find({type:'Text',text:'EXISTING_CONTROLS'})).toBeDefined();
+  expect((await ui.find({key:'toggle-better-render'}))?.text).toBe('Better Render: ON');
+  await ui.press({key:'toggle-better-render'});
+  expect((await ui.find({key:'toggle-better-render'}))?.text).toBe('Better Render: OFF');
+  expect(saved.enabled).toBe(false);
+  expect(await $.ui.render(MSG)).toEqual({type:'engine',ref:0});
+  await $.command.run({command:'render',args:'on'});
+  expect((await ui.find({key:'toggle-better-render'}))?.text).toBe('Better Render: ON');
+  await $.command.run({command:'render',args:'off'});
+  await ui.unmount();
+  const restored=await $.ui.mount(event);
+  expect((await restored.find({key:'toggle-better-render'}))?.text).toBe('Better Render: OFF');
+  await restored.press({key:'toggle-better-render'});
+  expect(saved.enabled).toBe(true);
+  await restored.unmount();
+  const desktop=await $.ui.mount({...event,surface:'desktop'});
+  expect(await desktop.find({key:'toggle-better-render'})).toBeUndefined();
+  await desktop.unmount();
 });

@@ -209,7 +209,7 @@ export function register(on:any) {
   on('command.run',{command:['render','better-render']},async($:any,e:any)=>{
     await init(s,$);const args=e.args.trim(),[cmd='',...rest]=args.split(/\s+/),value=rest.join(' ');
     if(!cmd||cmd==='demo') {s.demo=cmd==='demo';await $.ui.open(PANE);return {};}
-    if(cmd==='doctor') {const l=look(s,);return {text:`Better Render 0.1.3 · ${s.prefs.enabled?'on':'off'} · ${s.prefs.mode}\n${s.env.reason}\nNode: ${s.probe?.node||'not probed'}\nQueue: ${s.queue.size} · active: ${s.active}${s.lastError?`\nLast fallback: ${s.lastError}`:''}`};}
+    if(cmd==='doctor') {const l=look(s,);return {text:`Better Render 0.1.4 · ${s.prefs.enabled?'on':'off'} · ${s.prefs.mode}\n${s.env.reason}\nNode: ${s.probe?.node||'not probed'}\nQueue: ${s.queue.size} · active: ${s.active}${s.lastError?`\nLast fallback: ${s.lastError}`:''}`};}
     if(cmd==='copy') {if(!s.last)return {text:'No reply has been rendered yet.'};await $.ui.copy({text:s.last,surface:'terminal'});return {text:'Reply source copied.'};}
     if((cmd==='on'||cmd==='off')&&!value) {await save(s,$,{enabled:cmd==='on'});return {text:`Better Render ${cmd}.`};}
     if(['images','mermaid','preview'].includes(cmd)&&['on','off'].includes(value)) {await save(s,$,{[cmd]:value==='on'});return {text:`${cmd}: ${value}`};}
@@ -266,6 +266,15 @@ export function register(on:any) {
       if(result?.pages)tiles.push(ui.Box({flexDirection:'column',children:[...pages(s,ui,result,`draft:${item.n}`,`Image #${item.n}`),ui.Text({dimColor:true,children:`#${item.n}`})]}));
     }
     return tiles.length?ui.Box({flexDirection:'column',children:[original,ui.Box({flexDirection:'row',gap:1,children:tiles})]}):original;
+  });
+  on('ui.render',{component:'Pane',requestId:'sidebar-controls'},async($:any,e:any,next:any)=>{
+    const original=await next(e);if(e.surface!=='terminal')return original;
+    await init(s,$);const ui=$.ui.resolve(e);
+    return ui.Box({flexDirection:'column',children:[original,ui.Button({
+      key:'toggle-better-render',label:`Better Render: ${s.prefs.enabled?'ON':'OFF'}`,
+      color:s.prefs.enabled?'green':'gray',
+      onPress:()=>save(s,$,{enabled:!s.prefs.enabled}),
+    })]});
   });
   on('ui.render',{component:'Pane',requestId:PANE.id},async($:any,e:any,next:any)=>{
     if(e.surface!=='terminal')return next(e);await init(s,$);const ui=$.ui.resolve(e),p=s.prefs,children=[];

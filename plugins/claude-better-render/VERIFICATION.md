@@ -1,8 +1,8 @@
-# Verification — 0.1.3
+# Verification — 0.1.4
 
 Tested on macOS with Claude Code 2.1.312 and Node 22.
 
-- 18 Better Render hook tests cover native text preservation, old-preference
+- 19 Better Render hook tests cover native text preservation, old-preference
   migration, removal of typesetting/font/size commands, optional text styling,
   exact-source copying, settings, incomplete fences, Desktop passthrough,
   live-thinking composition, failed/stale jobs, tool-image ownership and drafts.
@@ -16,3 +16,6 @@ Tested on macOS with Claude Code 2.1.312 and Node 22.
   and Typst packages have been deleted. Image conversion uses sharp.
 
 Running sessions must reload plugins or restart to load newly installed files.
+
+The sidebar-toggle test verifies persistence, command synchronization, preservation
+of existing controls, remounting while disabled, and terminal-only display.

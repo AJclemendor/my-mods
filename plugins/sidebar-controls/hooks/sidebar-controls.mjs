@@ -1,4 +1,4 @@
-const pane = { id: "sidebar-controls", title: "Mod controls", columns: 30, rows: 3 };
+const pane = { id: "sidebar-controls", title: "Mod controls", columns: 30, rows: 4 };
 
 export function register(on) {
   // Compute visibility from the host instead of storing a flag that could outlive this plugin.
